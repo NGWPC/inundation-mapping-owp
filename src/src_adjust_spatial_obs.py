@@ -354,9 +354,19 @@ def ingest_points_layer(fim_directory, job_number, debug_outputs_option, log_fil
                     ]
                 )
 
-    with Pool(processes=job_number) as pool:
-        log_output = pool.map(process_points, procs_list)
-        log_file.writelines(["%s\n" % item for item in log_output])
+    # with Pool(processes=job_number) as pool:
+    #     log_output = pool.map(process_points, procs_list)
+    #     log_file.writelines(["%s\n" % item for item in log_output])
+
+    try:
+        with Pool(processes=job_number) as pool:
+            log_output = pool.map(process_points, procs_list)
+            log_file.writelines(["%s\n" % item for item in log_output])
+    except Exception as e:
+        print(str(huc) + ' --> ' + '  branch id: ' + str(branch_id) + str(e))
+        log_file.write(
+            'ERROR!!!: HUC ' + str(huc) + ' --> ' + '  branch id: ' + str(branch_id) + str(e) + '\n'
+        )
 
     log_file.write('#########################################################\n')
 
