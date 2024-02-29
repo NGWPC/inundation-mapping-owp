@@ -283,20 +283,20 @@ def branch_proc_list(usgs_df, run_dir, debug_outputs_option, log_file):
                 )
 
     # multiprocess all available branches
-    print(f"Calculating new SRCs for {len(procs_list)} branches using {job_number} jobs...")
-    with Pool(processes=job_number) as pool:
-        log_output = pool.starmap(update_rating_curve, procs_list)
-        log_file.writelines(["%s\n" % item for item in log_output])
+    # print(f"Calculating new SRCs for {len(procs_list)} branches using {job_number} jobs...")
+    # with Pool(processes=job_number) as pool:
+    #     log_output = pool.starmap(update_rating_curve, procs_list)
+    #     log_file.writelines(["%s\n" % item for item in log_output])
     # try statement for debugging
-    # try:
-    #     with Pool(processes=job_number) as pool:
-    #         log_output = pool.starmap(update_rating_curve, procs_list)
-    #         log_file.writelines(["%s\n" % item for item in log_output])
-    # except Exception as e:
-    #     print(str(huc) + ' --> ' + '  branch id: ' + str(branch_id) + str(e))
-    #     log_file.write(
-    #         'ERROR!!!: HUC ' + str(huc) + ' --> ' + '  branch id: ' + str(branch_id) + str(e) + '\n'
-    #     )
+    try:
+        with Pool(processes=job_number) as pool:
+            log_output = pool.starmap(update_rating_curve, procs_list)
+            log_file.writelines(["%s\n" % item for item in log_output])
+    except Exception as e:
+        print(str(huc) + ' --> ' + '  branch id: ' + str(branch_id) + str(e))
+        log_file.write(
+            'ERROR!!!: HUC ' + str(huc) + ' --> ' + '  branch id: ' + str(branch_id) + str(e) + '\n'
+        )
 
 
 def run_prep(run_dir, usgs_rc_filepath, nwm_recurr_filepath, debug_outputs_option, job_number):
