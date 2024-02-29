@@ -37,4 +37,8 @@ The following contains a list of files that were updated from the latest commit 
     - Updated to optimize for peak memory and garbage collection.
 16. `tools/tools_shared_functions.py`
     - Updated to optimize for peak memory and garbage collection.
+17. `src/src_adjust_usgs_rating.py`
+    - Uncomment "try statement for debugging" in order to get 3m LiDAR to succesfully complete fim_post_processing.sh step
+18. `src/src_adjust_spatial_obs.py`
+    - Add try except block to continue processing if errors.
 ```
