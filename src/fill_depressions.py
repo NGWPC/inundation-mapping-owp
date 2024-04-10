@@ -7,7 +7,7 @@ import rasterio
 import whitebox
 import pyflwdir
 
-def fill_depressions(workspace, branch_zero_id):
+def fill_depressions_wbt(workspace, branch_zero_id):
     '''
     Wrapper around either whitebox tool fill_depressions methods:
     https://www.whiteboxgeo.com/manual/wbt_book/available_tools/hydrological_analysis.html#filldepressions
@@ -45,15 +45,30 @@ def fill_depressions_pyflwdir(workspace, branch_zero_id):
         input_dem = os.path.join(workspace, f'dem_burned.tif')
         output_dem = os.path.join(workspace, f'dem_burned_filled.tif')
 
-    # Example:
-    # pyflwdir.dem.fill_depressions(elevtn,
-    #     outlets='edge',
-    #     idxs_pit=None,
-    #     nodata=-9999.0,
-    #     max_depth=-1.0,
-    #     elv_max=None,
-    #     connectivity=8
-    # )
+    with rasterio.open(input_dem, "r") as src:
+        elevtn = src.read(1)
+        nodata = src.nodata
+        profile = src.profile
+        # transform = src.transform
+        # crs = src.crs
+
+    output = pyflwdir.dem.fill_depressions(elevtn,
+        outlets='edge',
+        idxs_pit=None,
+        nodata=-9999.0,
+        max_depth=-1.0,
+        elv_max=None,
+        connectivity=8
+    )
+
+    # Output is two arrays, the 0 index is elevtn_out: 2D array - Depression filled elevation
+    #  and 1st index is d8: 2D array of uint8 - D8 flow directions
+    dem_burned_filled = output[0]
+
+    profile.update(dtype=dem_burned_filled.dtype)
+
+    with rasterio.open(output_dem, 'w', **profile) as dst:
+        dst.write(dem_burned_filled, 1)
 
 
 
@@ -70,14 +85,15 @@ if __name__ == '__main__':
     workspace = args['workspace']
     branch_zero_id = args['branch_zero_id']
 
-    # Run pyflwdir fill_depressions
-    # fill_depressions_pyflwdir(
-    #     workspace,
-    #     branch_zero_id
-    # )
-    
-    # Run WBT fill_depressions
-    fill_depressions(
+    ## Run pyflwdir fill_depressions
+    fill_depressions_pyflwdir(
         workspace,
         branch_zero_id
     )
+    
+    ## Run WBT fill_depressions
+    # fill_depressions_wbt(
+    #     workspace,
+    #     branch_zero_id
+    # )
+
