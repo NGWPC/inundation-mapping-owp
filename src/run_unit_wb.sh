@@ -206,7 +206,8 @@ python3 $srcDir/agreedem.py \
     -o $tempCurrentBranchDataDir/dem_burned_$branch_zero_id.tif \
     -b $agree_DEM_buffer \
     -sm 10 \
-    -sh 1000
+    -sh 1000 \
+    -t
 Tcount
 
 ## DEM Reconditioning - BRANCHES (NOT 0) (NWM levelpath streams) ##

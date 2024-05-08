@@ -68,8 +68,6 @@ def accumulate_flow(
         headwaters = src.read(1)
         nodata = src.nodata
 
-    src.close()
-
     flowaccum = flw.accuflux(headwaters, nodata=nodata, direction='up')
 
     del flw

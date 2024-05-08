@@ -67,7 +67,7 @@ RUN mkdir -p $depDir
 COPY --from=builder $depDir $depDir
 
 RUN apt update --fix-missing
-RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y p7zip-full python3-pip time mpich parallel libgeos-dev expect tmux rsync tzdata
+RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y vim p7zip-full python3-pip time mpich parallel libgeos-dev expect tmux rsync tzdata
 
 RUN apt auto-remove
 
