@@ -53,7 +53,7 @@ def mask_dem(
 
     dem_masked = None
 
-    with rio.open(dem_filename) as dem:
+    with rio.open(dem_filename, BIGTIFF='YES') as dem:
         dem_profile = dem.profile.copy()
         nodata = dem.nodata
 

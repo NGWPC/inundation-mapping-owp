@@ -1,7 +1,6 @@
 #!/bin/bash -e
 
-# Do not call this file directly. Call fim_process_unit_wb.sh which calls
-# this file.
+# Do not call this file directly. Call fim_process_unit_wb.sh which calls this file.
 
 ## SOURCE FILE AND FUNCTIONS ##
 # load the various enviro files

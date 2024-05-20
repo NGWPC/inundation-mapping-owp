@@ -67,7 +67,7 @@ def fill_depressions_pyflwdir(workspace, branch_zero_id):
 
     profile.update(dtype=dem_burned_filled.dtype)
 
-    with rasterio.open(output_dem, 'w', **profile) as dst:
+    with rasterio.open(output_dem, 'w', **profile, BIGTIFF='YES') as dst:
         dst.write(dem_burned_filled, 1)
 
 

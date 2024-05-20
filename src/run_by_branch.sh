@@ -1,10 +1,14 @@
 #!/bin/bash -e
 
-## INITIALIZE TOTAL TIME TIMER ##
-T_total_start
-
 ## SOURCE BASH FUNCTIONS
 source $srcDir/bash_functions.env
+
+#source $outputDestDir/runtime_args.env
+#source $outputDestDir/params.env
+#source $srcDir/bash_variables.env
+
+## INITIALIZE TOTAL TIME TIMER ##
+T_total_start
 
 ## SET VARIABLES AND FILE INPUTS ##
 hucNumber="$1"
@@ -14,7 +18,7 @@ huc4Identifier=${hucNumber:0:4}
 huc2Identifier=${hucNumber:0:2}
 
 # Skip branch zero
-if [ $current_branch_id = $branch_zero_id ]; then
+if [[ $current_branch_id = $branch_zero_id ]]; then
     exit 0
 fi
 

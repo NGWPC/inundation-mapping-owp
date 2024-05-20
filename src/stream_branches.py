@@ -1315,7 +1315,7 @@ class StreamBranchPolygons(StreamNetwork):
                     base, ext = os.path.splitext(out_filename_template)
                     out_filename = base + "_{}".format(branch_id) + ext
 
-                    with rasterio.open(out_filename, "w", **buffered_meta) as out:
+                    with rasterio.open(out_filename, "w", **buffered_meta, BIGTIFF='YES') as out:
                         out.write(buffered_array)
 
                 # return files in list
