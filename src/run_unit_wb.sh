@@ -132,8 +132,7 @@ Tstart
 [ ! -f $tempCurrentBranchDataDir/dem_meters.tif ] && \
 gdalwarp -cutline $tempHucDataDir/wbd_buffered.gpkg -crop_to_cutline -ot Float32 -r bilinear -of "GTiff" \
     -overwrite -co "BLOCKXSIZE=512" -co "BLOCKYSIZE=512" -co "TILED=YES" -co "COMPRESS=LZW" \
-    -co "BIGTIFF=YES" -t_srs $huc_CRS -tr $dem_resolution_meters $dem_resolution_meters \
-    $input_DEM $tempHucDataDir/dem_meters.tif
+    -co "BIGTIFF=YES" -t_srs $huc_CRS -tr $res $res $input_DEM $tempHucDataDir/dem_meters.tif
 
 
 ## GET RASTER METADATA

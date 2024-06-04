@@ -31,11 +31,16 @@ Once you get AWS credentials, open your terminal window and type:
 ```
 aws configure --profile esip
 ```
+This still works for NGWPC without getting AWS credentials
+```
+aws configure
+```
 It will ask you for the Access key ID, Secret Access Key, Region and default language (just hit tab for that entry).
 
 With the keys in place, you can test your credentials get a list folders prior to download as well as execute other S3 cli commands:
 ```
 aws s3 ls s3://noaa-nws-owp-fim --profile esip
+aws s3 ls s3://noaa-nws-owp-fim --request-payer
 ```
 
 ### Examples
@@ -46,11 +51,20 @@ The available inputs, test cases, and versioned FIM outputs can be found by runn
 ```
 aws s3 ls s3://noaa-nws-owp-fim/hand_fim/  --profile esip
 ```
+This still works for NGWPC without getting AWS credentials
+```
+aws s3 ls s3://noaa-nws-owp-fim/hand_fim/  --request-payer
+```
 
 Download a directory of sample outputs for a single HUC8:
 ```
 aws s3 sync s3://noaa-nws-owp-fim/hand_fim/outputs/fim_4_4_0_0/12090301 \
+```
+This still works for NGWPC without getting AWS credentials
+```
     /your_local_folder_name/12090301 --profile esip
+aws s3 sync s3://noaa-nws-owp-fim/hand_fim/outputs/fim_4_4_0_0/12090301 \
+    /your_local_folder_name/12090301 --request-payer
 ```
 By adjusting pathing, you can also download entire directories such as the `fim_4_4_0_0` folder. An entire output FIM set (e.g. `fim_4_4_0_0`) is approximately 1.1 TB.
 
