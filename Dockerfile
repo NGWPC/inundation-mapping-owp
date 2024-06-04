@@ -75,7 +75,7 @@ RUN rm /etc/apt/sources.list.d/apache-arrow.sources
 RUN apt-get update --fix-missing && apt-get install -y openjdk-19-jdk && rm -rf /var/lib/apt/lists/*
 
 RUN apt update --fix-missing
-RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y p7zip-full python3-pip time mpich parallel libgeos-dev expect tmux rsync tzdata
+RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y vim p7zip-full python3-pip time mpich parallel libgeos-dev expect tmux rsync tzdata
 
 RUN apt auto-remove
 
