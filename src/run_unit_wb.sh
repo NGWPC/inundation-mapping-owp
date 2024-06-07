@@ -22,7 +22,8 @@ if [ "$input_DEM_source" = "seamless_10m" ]; then
 elif [ "$input_DEM_source" = "tiles_1m" ]; then
     input_DEM=$input_DEM_tiles
 else
-    echo -e "input_DEM_source is not set to a valid option. Only 'seamless_10m' or 'tiles_1m' are valid options. Please check your config file. Exiting ..."
+    echo -e "input_DEM_source is not set to a valid option. Only 'seamless_10m' or 'tiles_1m' are valid options."
+    echo -e "Please check your config file. Exiting ..."
     exit 1
 fi
 
@@ -125,7 +126,7 @@ Tstart
 [ ! -f $tempCurrentBranchDataDir/dem_meters.tif ] && \
 gdalwarp -cutline $tempHucDataDir/wbd_buffered.gpkg -crop_to_cutline -ot Float32 -r bilinear -of "GTiff" \
     -overwrite -co "BLOCKXSIZE=512" -co "BLOCKYSIZE=512" -co "TILED=YES" -co "COMPRESS=LZW" \
-    -tr $dem_resolution_meters $dem_resolution_meters -co "BIGTIFF=YES" \
+    -tr $res $res -co "BIGTIFF=YES" \
     -t_srs $DEFAULT_FIM_PROJECTION_CRS $input_DEM $tempHucDataDir/dem_meters.tif
 
 Tcount
@@ -230,9 +231,17 @@ fi
 echo -e $startDiv"Pit remove Burned DEM $hucNumber $branch_zero_id"
 date -u
 Tstart
-# rd_depression_filling $tempCurrentBranchDataDir/dem_burned_$branch_zero_id.tif \
-#     $tempCurrentBranchDataDir/dem_burned_filled_$branch_zero_id.tif
-python3 $srcDir/fill_depressions.py -w $tempCurrentBranchDataDir -b $branch_zero_id
+if [[ "$res" = "10" || "$res" = "5" ]]; then
+    echo "Running rd_depression_filling on 10m (or 5m) resolution..."
+    rd_depression_filling $tempCurrentBranchDataDir/dem_burned_$branch_zero_id.tif \
+        $tempCurrentBranchDataDir/dem_burned_filled_$branch_zero_id.tif
+else
+    echo "Running fill_depressions.py on < 5m resolution..."
+    ## Temporary fix for pyflwdir package for 1m 
+    sed -i '88i\        if idxs_ds.dtype == np.uint64:' /usr/local/lib/python3.10/dist-packages/pyflwdir/flwdir.py
+    sed -i '89i\            self._mv = np.uint64(self._mv)' /usr/local/lib/python3.10/dist-packages/pyflwdir/flwdir.py
+    python3 $srcDir/fill_depressions.py -w $tempCurrentBranchDataDir -b $branch_zero_id -r $res
+fi
 Tcount
 
 ## PIT REMOVE BURNED DEM - BRANCHES (NOT 0) (NWM levelpath streams) ##
@@ -240,8 +249,16 @@ if [ "$levelpaths_exist" = "1" ]; then
     echo -e $startDiv"Pit remove Burned DEM $hucNumber (Branches)"
     date -u
     Tstart
-    # rd_depression_filling $tempHucDataDir/dem_burned.tif $tempHucDataDir/dem_burned_filled.tif
-    python3 $srcDir/fill_depressions.py -w $tempHucDataDir
+    if [[ "$res" = "10" || "$res" = "5" ]]; then
+        echo "Running rd_depression_filling on 10m (or 5m) resolution..."
+        rd_depression_filling $tempHucDataDir/dem_burned.tif $tempHucDataDir/dem_burned_filled.tif
+    else
+        echo "Running fill_depressions.py on < 5m resolution..."
+        ## Temporary fix for pyflwdir package for 1m 
+        sed -i '88i\        if idxs_ds.dtype == np.uint64:' /usr/local/lib/python3.10/dist-packages/pyflwdir/flwdir.py
+        sed -i '89i\            self._mv = np.uint64(self._mv)' /usr/local/lib/python3.10/dist-packages/pyflwdir/flwdir.py
+        python3 $srcDir/fill_depressions.py -w $tempHucDataDir -r $res
+    fi
     Tcount
 fi
 

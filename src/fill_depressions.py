@@ -9,13 +9,13 @@ import pyflwdir
 
 def fill_depressions_wbt(workspace, branch_zero_id):
     '''
-    Wrapper around either whitebox tool fill_depressions methods:
+    Wrapper around whitebox tools fill_depressions methods:
     https://www.whiteboxgeo.com/manual/wbt_book/available_tools/hydrological_analysis.html#filldepressions
     '''
     
     # Set wbt envs
     wbt = whitebox.WhiteboxTools()
-    wbt.set_verbose_mode(True)
+    wbt.set_verbose_mode(False)
 
     if branch_zero_id:
         input_dem = os.path.join(workspace, f'dem_burned_{branch_zero_id}.tif')
@@ -34,7 +34,7 @@ def fill_depressions_wbt(workspace, branch_zero_id):
 
 def fill_depressions_pyflwdir(workspace, branch_zero_id):
     '''
-    Pit Fill method wrapper for pyflwdir methods:
+    Wrapper around pyflwdir fill_depressions methods:
     https://deltares.github.io/pyflwdir/latest/_generated/pyflwdir.dem.fill_depressions.html#pyflwdir-dem-fill-depressions
     '''
     
@@ -71,12 +71,12 @@ def fill_depressions_pyflwdir(workspace, branch_zero_id):
         dst.write(dem_burned_filled, 1)
 
 
-
 if __name__ == '__main__':
     # Parse arguments
     parser = argparse.ArgumentParser(description='Fill depressions')
     parser.add_argument('-w', '--workspace', help='Workspace', required=True)
     parser.add_argument('-b', '--branch_zero_id', help='If branch_zero_id is provided, update output path', required=False, default=None)
+    parser.add_argument('-r', '--resolution', help='DEM resolution', required=True, type=int)
 
     # Extract to dictionary and assign to variables.
     args = vars(parser.parse_args())
@@ -84,16 +84,21 @@ if __name__ == '__main__':
     # rename variable inputs
     workspace = args['workspace']
     branch_zero_id = args['branch_zero_id']
+    resolution = args['resolution']
 
-    ## Run pyflwdir fill_depressions
-    fill_depressions_pyflwdir(
-        workspace,
-        branch_zero_id
-    )
+    # Run pyflwdir fill_depressions on 1m DEMs
+    if resolution == 1:
+        print(f"Using Pyflwdir Fill Depressions method on {resolution}m resolution")
+        fill_depressions_pyflwdir(
+            workspace,
+            branch_zero_id
+        )
     
-    ## Run WBT fill_depressions
-    # fill_depressions_wbt(
-    #     workspace,
-    #     branch_zero_id
-    # )
+    ## Run WBT fill_depressions on 3m DEMs
+    if resolution == 3:
+        print(f"Using WBT Fill Depressions method on {resolution}m resolution")
+        fill_depressions_wbt(
+            workspace,
+            branch_zero_id
+        )
 
