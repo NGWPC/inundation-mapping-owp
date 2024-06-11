@@ -120,7 +120,8 @@ RUN wbox_path=/usr/local/lib/python3.10/dist-packages/whitebox/ && \
     wget -P $wbox_path https://www.whiteboxgeo.com/WBT_Linux/WhiteboxTools_linux_musl.zip && \
     unzip -o $wbox_path/WhiteboxTools_linux_musl.zip -d $wbox_path && \
     cp $wbox_path/WhiteboxTools_linux_amd64/WBT/whitebox_tools $wbox_path && \
-    mkdir $wbox_path/testdata
+    mkdir $wbox_path/testdata && \
+    mkdir $wbox_path/WBT
 # ----------------------------------
 
 ## RUN UMASK TO CHANGE DEFAULT PERMISSIONS ##
