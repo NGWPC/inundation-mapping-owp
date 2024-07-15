@@ -211,7 +211,7 @@ fi
 echo -e $startDiv"Pit remove Burned DEM $hucNumber $branch_zero_id"
 date -u
 Tstart
-if [[ "$res" = "10" || "$res" = "5" ]]; then
+if [[ "$res" = "10" ]]; then
     echo "Running rd_depression_filling on 10m (or 5m) resolution..."
     rd_depression_filling $tempCurrentBranchDataDir/dem_burned_$branch_zero_id.tif \
         $tempCurrentBranchDataDir/dem_burned_filled_$branch_zero_id.tif

@@ -95,7 +95,7 @@ if __name__ == '__main__':
         )
     
     ## Run WBT fill_depressions on 3m DEMs
-    if resolution == 3:
+    if resolution == 3 or resolution == 5 :
         print(f"Using WBT Fill Depressions method on {resolution}m resolution")
         fill_depressions_wbt(
             workspace,
