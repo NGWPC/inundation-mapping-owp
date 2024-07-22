@@ -185,7 +185,7 @@ def scatterplot(dataframe, x_field, y_field, title_text, stats_text=False, annot
         If STR provide the full path to the figure to be saved. If False
         no plot is saved to disk. The default is False.
 
-    Returnsy
+    Returns
     -------
     fig : MATPLOTLIB
         Plot.
