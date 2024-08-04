@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-
+import pdb
 import json
 import os
 import pathlib
 from pathlib import Path
 import gc
-
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -87,46 +86,44 @@ def check_for_regression(
 
     return difference_dict
 
-
 def compute_contingency_stats_from_rasters(
-    predicted_raster_path: str,
-    benchmark_raster_path: str,
+    version: str,
+    lid: str,
+    magnitude: str,
+    huc: str,
+    archive: bool,
+    benchmark_flows: str = None,
+    benchmark_raster_path: str = None,
+    predicted_raster_path: str = None,
     agreement_raster: str = None,
-    stats_csv: str = None,
-    stats_json: str = None,
+    bench_category: str = None,
+    extent_config: str = None,
+    calibrated: bool = False,
     mask_dict: dict = {},
 ):
     """
     This function contains FIM-specific logic to prepare raster datasets for use in the generic
     get_stats_table_from_binary_rasters() function. This function also calls the generic
-    compute_stats_from_contingency_table() function and writes the results to CSV and/or JSON, depending on user input.
+    compute_stats_from_contingency_table() function and writes the results to a DuckDB table.
 
     Parameters
     ----------
-    predicted_raster_path: str
+    huc : str
+        The HUC code.
+    version : str
+        The version of the dataset.
+    bench_category : str
+        The benchmark category.
+    predicted_raster_path : str
         The path to the predicted, or modeled, FIM extent raster.
-    benchmark_raster_path: str
+    benchmark_raster_path : str
         The path to the benchmark, or truth, FIM extent raster.
-    agreement_raster: str, optional
+    agreement_raster : str, optional
         An agreement raster will be written to this path. 0: True Negatives, 1: False Negative, 2: False Positive,
         3: True Positive.
-    stats_csv: str, optional
-        Performance statistics will be written to this path. CSV allows for readability and other tabular processes.
-    stats_json: str, optional
-        Performance statistics will be written to this path. JSON allows for quick ingestion into Python dictionary
-        in other processes.
-    mask_dict: dict
-        Dictionary with inclusionary and/or exclusionary masks asn options.
-
-    Returns
-    -------
-    dict
-        A dictionary of statistics produced by compute_stats_from_contingency_table(). Statistic names are keys and
-        statistic values are the values.
+    mask_dict : dict, optional
+        Dictionary with inclusionary and/or exclusionary mask options.
     """
-
-    # print('candidate', predicted_raster_path)
-    # print('benchmark', benchmark_raster_path)
 
     # Get statistics table from two rasters.
     gc.collect()
@@ -134,22 +131,27 @@ def compute_contingency_stats_from_rasters(
         benchmark_raster_path, predicted_raster_path, agreement_raster, mask_dict=mask_dict
     )
     gc.collect()
+    if archive:
+        ver_env = "archive"
+    else:
+        ver_env = "dev"
+    # Flatten the stats dictionary for insertion into metrics csv
+    flat_stats = {
+        'version': version,
+        'ver_env': ver_env,
+        'lid':lid,
+        'magnitude':magnitude,
+        'huc': huc,
+        'benchmark_source': bench_category,
+        'extent_config': extent_config,
+        'calibrated': calibrated
+    }
 
-    for stats_mode in stats_dictionary:
-        # Write the mode_stats_dictionary to the stats_csv.
-        if stats_csv != None:
-            stats_csv = os.path.join(os.path.split(stats_csv)[0], stats_mode + '_stats.csv')
-            df = pd.DataFrame.from_dict(stats_dictionary[stats_mode], orient="index", columns=['value'])
-            df.to_csv(stats_csv)
+    for stats_mode, mode_stats in stats_dictionary.items():
+        for stat_name, value in mode_stats.items():
+            flat_stats[stat_name] = value
 
-        # Write the mode_stats_dictionary to the stats_json.
-        if stats_json != None:
-            stats_json = os.path.join(os.path.split(stats_csv)[0], stats_mode + '_stats.json')
-            with open(stats_json, "w") as outfile:
-                json.dump(stats_dictionary[stats_mode], outfile)
-
-    return stats_dictionary
-
+    return flat_stats
 
 def profile_test_case_archive(archive_to_check, magnitude, stats_mode):
     """

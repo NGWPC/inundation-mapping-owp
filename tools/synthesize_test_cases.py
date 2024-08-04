@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import pdb
 import argparse
 import ast
 import csv
@@ -21,11 +21,11 @@ from tools_shared_variables import (
     OUTPUTS_DIR,
     PREVIOUS_FIM_DIR,
     TEST_CASES_DIR,
+    EVAL_METRICS_PATH
 )
 from tqdm import tqdm
 
 from utils.shared_functions import FIM_Helpers as fh
-
 
 def progress_bar_handler(executor_dict, verbose, desc):
     for future in tqdm(
@@ -139,13 +139,6 @@ if __name__ == '__main__':
         type=int,
     )
     parser.add_argument(
-        '-s',
-        '--special-string',
-        help='Add a special name to the end of the branch.',
-        required=False,
-        default="",
-    )
-    parser.add_argument(
         '-b',
         '--benchmark-category',
         help='A benchmark category to specify. Defaults to process all categories.',
@@ -158,21 +151,6 @@ if __name__ == '__main__':
         help='Overwrite all metrics or only fill in missing metrics.',
         required=False,
         action="store_true",
-    )
-    parser.add_argument(
-        '-dc',
-        '--dev-version-to-compare',
-        nargs='+',
-        help='Specify the name(s) of a dev (testing) version to include in master '
-        'metrics CSV. Pass a space-delimited list.',
-        required=False,
-    )
-    parser.add_argument(
-        '-m',
-        '--master-metrics-csv',
-        help='Define path for master metrics CSV file.',
-        required=False,
-        default=None,
     )
     parser.add_argument(
         '-d',
@@ -192,22 +170,6 @@ if __name__ == '__main__':
         default=None,
         action='store_true',
     )
-    parser.add_argument(
-        '-pcsv',
-        '--previous-metrics-csv',
-        help='Optional: Filepath for a CSV with previous metrics to concatenate with new '
-        'metrics to form a final aggregated metrics csv.',
-        required=False,
-        default=None,
-    )
-    parser.add_argument(
-        '-pfiles',
-        '--cycle-previous-files',
-        help='Optional: Specifies whether previous metrics should be compiled by cycling '
-        'through files (True). Cannot be used if a previous metrics CSV is provided.',
-        required=False,
-        action="store_true",
-    )
 
     # Assign variables from arguments.
     args = vars(parser.parse_args())
@@ -215,18 +177,13 @@ if __name__ == '__main__':
     fim_version = args['fim_version']
     job_number_huc = args['job_number_huc']
     job_number_branch = args['job_number_branch']
-    special_string = args['special_string']
     benchmark_category = args['benchmark_category']
     overwrite = args['overwrite']
-    dev_versions_to_compare = args['dev_version_to_compare']
-    master_metrics_csv = args['master_metrics_csv']
     fr_run_dir = args['fr_run_dir']
     calibrated = args['calibrated']
     model = args['model']
     verbose = bool(args['verbose'])
     gms_verbose = bool(args['gms_verbose'])
-    prev_metrics_csv = args['previous_metrics_csv']
-    pfiles = bool(args['cycle_previous_files'])
 
     print("================================")
     print("Start synthesize test cases")
@@ -245,21 +202,6 @@ if __name__ == '__main__':
             'Please lower the job_number_huc or job_number_branch'
             'values accordingly.'.format(job_number_huc, job_number_branch)
         )
-
-    # Default to processing all possible versions in PREVIOUS_FIM_DIR.
-    # Otherwise, process only the user-supplied version.
-    prev_versions_to_include_list = []
-    dev_versions_to_include_list = []
-    if fim_version != "all" and pfiles is False:
-        if config == 'PREV':  # official fim model results
-            prev_versions_to_include_list = [fim_version]
-        elif config == 'DEV':  # development fim model results
-            dev_versions_to_include_list = [fim_version]
-    else:
-        prev_versions_to_include_list = os.listdir(PREVIOUS_FIM_DIR)
-        if config == 'DEV':  # development fim model results
-            dev_versions_to_include_list = [fim_version]
-
     # Define whether or not to archive metrics in "official_versions" or "testing_versions" for each test_id.
     if config == 'PREV':
         archive_results = True
@@ -276,36 +218,7 @@ if __name__ == '__main__':
     )
 
     # print('all test cases', all_test_cases)
-
-    # Make sure cycle-previous-files and a previous metric CSV have not been concurrently selected
-    if prev_metrics_csv is not None and pfiles is True:
-        print(
-            "Error: Cycle previous files and previous metric CSV functionality cannot be used concurrently."
-        )
-        sys.exit(1)
-
-    # Check whether a previous metrics CSV has been provided and, if so, make sure the CSV exists
-    if prev_metrics_csv is not None:
-        if not os.path.exists(prev_metrics_csv):
-            print(f"Error: File does not exist at {prev_metrics_csv}")
-            sys.exit(1)
-        else:
-            print(f"Metrics will be combined with previous metric CSV: {prev_metrics_csv}")
-            print()
-    else:
-        print("ALERT: A previous metric CSV has not been provided (-pcsv) - this is optional.")
-        print()
-
-    # Print whether the previous files will be cycled through
-    if pfiles is True:
-        print("ALERT: Metrics from previous directories will be compiled.")
-        print()
-    else:
-        print(
-            "ALERT: Metrics from previous directories will NOT be compiled (-pfiles not provided) \n"
-            "   - pfiles is optional -"
-        )
-        print()
+    all_run_metrics = []
 
     # Set up multiprocessor
     with ProcessPoolExecutor(max_workers=job_number_huc) as executor:
@@ -335,11 +248,65 @@ if __name__ == '__main__':
                 traceback.print_exc()
                 sys.exit(1)
 
+        for future in as_completed(executor_dict):
+            test_id = executor_dict[future]
+            try:
+                all_flat_stats = future.result()
+                if all_flat_stats:
+                    all_run_metrics.extend(all_flat_stats)
+            except Exception as ex:
+                print(f"*** Error processing test case {test_id}: {ex}")
+                traceback.print_exc()
+
         # Send the executor to the progress bar and wait for all MS tasks to finish
         progress_bar_handler(
             executor_dict, True, f"Running {model} alpha test cases with {job_number_huc} workers"
         )
         # wait(executor_dict.keys())
+
+    # # run test case without futures for debugging
+    # for test_case_class in all_test_cases:
+    #     if not os.path.exists(test_case_class.fim_dir):
+    #         continue
+    #     fh.vprint(f"test_case_class.test_id is {test_case_class.test_id}", verbose)
+    #     all_flat_stats = test_case_class.alpha_test(calibrated=calibrated,model=model,mask_type='huc',overwrite=overwrite,verbose=gms_verbose,gms_workers=1)
+    #     all_run_metrics.extend(all_flat_stats)
+
+    # Separate the primary key columns
+    primary_keys = ['version', 'ver_env','lid','magnitude','huc','benchmark_source','extent_config','calibrated']
+
+    # Check if the metrics file exists
+    if not os.path.exists(EVAL_METRICS_PATH ):
+        if all_run_metrics:
+            additional_keys = [key for key in all_run_metrics[0].keys() if key not in primary_keys]
+            headers = primary_keys + additional_keys
+            df = pd.DataFrame(columns=headers)
+            df.to_csv(EVAL_METRICS_PATH, index=False)
+        else:
+            raise ValueError("all_run_metrics is empty, cannot determine additional keys for headers.")
+    else:
+        # Load the CSV file into a pandas DataFrame
+        df = pd.read_csv(EVAL_METRICS_PATH)
+
+    for flat_stats in all_run_metrics:
+        # Separate the primary key values and metric values
+        primary_key_values = {key: flat_stats[key] for key in primary_keys}
+        metric_values = {key: flat_stats[key] for key in flat_stats.keys() if key not in primary_keys}
+    
+        # Check if the row already exists
+        exists = df.loc[(df[list(primary_key_values)] == pd.Series(primary_key_values)).all(axis=1)]
+    
+        if not exists.empty:
+            # If the row exists, update it
+            for key, value in metric_values.items():
+                df.loc[(df[list(primary_key_values)] == pd.Series(primary_key_values)).all(axis=1), key] = value
+        else:
+            # If the row does not exist, insert a new row
+            new_row = pd.DataFrame([{**primary_key_values, **metric_values}])
+            df = pd.concat([df, new_row], ignore_index=True)
+
+    # Write the updated DataFrame back to the CSV file
+    df.to_csv(EVAL_METRICS_PATH, index=False)
 
     # Composite alpha test run is initiated by a MS `model` and providing a `fr_run_dir`
     if model == 'MS' and fr_run_dir:
@@ -398,20 +365,6 @@ if __name__ == '__main__':
             progress_bar_handler(
                 executor_dict, verbose, f"Compositing test cases with {job_number_huc} workers"
             )
-
-    ## if using DEV version, include the testing versions the user included with the "-dc" flag
-    if dev_versions_to_compare is not None:
-        dev_versions_to_include_list += dev_versions_to_compare
-
-    # Specify which results to iterate through
-    if config == 'DEV':
-        iteration_list = [
-            'official',
-            'testing',
-        ]  # iterating through official model results AND testing model(s)
-    else:
-        iteration_list = ['official']  # only iterating through official model results
-
     print("================================")
     print("End synthesize test cases")
 

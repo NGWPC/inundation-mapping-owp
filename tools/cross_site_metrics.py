@@ -1,4 +1,4 @@
-
+### draft!
 def create_master_metrics_csv(
     master_metrics_csv_output,
     dev_versions_to_include_list,
@@ -275,4 +275,33 @@ def create_master_metrics_csv(
 #     pfiles=pfiles,
 #     prev_metrics_csv=prev_metrics_csv,
 # )
+
+#### Code below originally taken from synthesize_test_cases.py ####
+
+    # Default to processing all possible versions in PREVIOUS_FIM_DIR.
+    # Otherwise, process only the user-supplied version.
+    prev_versions_to_include_list = []
+    dev_versions_to_include_list = []
+    if fim_version != "all" and pfiles is False:
+        if config == 'PREV':  # official fim model results
+            prev_versions_to_include_list = [fim_version]
+        elif config == 'DEV':  # development fim model results
+            dev_versions_to_include_list = [fim_version]
+    else:
+        prev_versions_to_include_list = os.listdir(PREVIOUS_FIM_DIR)
+        if config == 'DEV':  # development fim model results
+            dev_versions_to_include_list = [fim_version]
+
+    ## if using DEV version, include the testing versions the user included with the "-dc" flag
+    if dev_versions_to_compare is not None:
+        dev_versions_to_include_list += dev_versions_to_compare
+
+    # Specify which results to iterate through
+    if config == 'DEV':
+        iteration_list = [
+            'official',
+            'testing',
+        ]  # iterating through official model results AND testing model(s)
+    else:
+        iteration_list = ['official']  # only iterating through official model results
 

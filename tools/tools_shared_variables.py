@@ -1,24 +1,22 @@
 import os
 
-
 # Environmental variables and constants.
 TEST_CASES_DIR = r"/data/test_cases/"
 PREVIOUS_FIM_DIR = r"/data/previous_fim"
 OUTPUTS_DIR = os.environ["outputsDir"]
 INPUTS_DIR = os.environ["inputsDir"]
+WORK_DIR = os.environ["workDir"]
+CAT_PATH = r"/data/static_cat/catalog.json"
+EVAL_METRICS_PATH = r"/data/master_metrics.csv"
 AHPS_BENCHMARK_CATEGORIES = ["usgs", "nws"]
 FR_BENCHMARK_CATEGORIES = ["ble", "ifc"]
 BLE_MAGNITUDE_LIST = ["100yr", "500yr"]
-IFC_MAGNITUDE_LIST = ["2yr", "5yr", "10yr", "25yr", "50yr", "100yr", "200yr", "500yr"]
 AHPS_MAGNITUDE_LIST = ["action", "minor", "moderate", "major"]
-RAS2FIM_MAGNITUDE_LIST = ["2yr", "5yr", "10yr", "25yr", "50yr", "100yr"]
 
 MAGNITUDE_DICT = {
     "ble": BLE_MAGNITUDE_LIST,
-    "ifc": IFC_MAGNITUDE_LIST,
     "usgs": AHPS_MAGNITUDE_LIST,
     "nws": AHPS_MAGNITUDE_LIST,
-    "ras2fim": RAS2FIM_MAGNITUDE_LIST,
 }
 PRINTWORTHY_STATS = [
     "CSI",
