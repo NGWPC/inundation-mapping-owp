@@ -217,9 +217,9 @@ if [[ "$res" = "10" ]]; then
         $tempCurrentBranchDataDir/dem_burned_filled_$branch_zero_id.tif
 else
     echo "Running fill_depressions.py on < 10m resolution..."
-    ## Temporary fix for pyflwdir package for 1m 
-    # sed -i '88i\        if idxs_ds.dtype == np.uint64:' /usr/local/lib/python3.10/dist-packages/pyflwdir/flwdir.py
-    # sed -i '89i\            self._mv = np.uint64(self._mv)' /usr/local/lib/python3.10/dist-packages/pyflwdir/flwdir.py
+    ## Temporary fix for pyflwdir package for 3m/1m 
+    sed -i '88i\        if idxs_ds.dtype == np.uint64:' /usr/local/lib/python3.10/dist-packages/pyflwdir/flwdir.py
+    sed -i '89i\            self._mv = np.uint64(self._mv)' /usr/local/lib/python3.10/dist-packages/pyflwdir/flwdir.py
     python3 $srcDir/fill_depressions.py -w $tempCurrentBranchDataDir -b $branch_zero_id -r $res
 fi
 Tcount
@@ -234,9 +234,6 @@ if [ "$levelpaths_exist" = "1" ]; then
         rd_depression_filling $tempHucDataDir/dem_burned.tif $tempHucDataDir/dem_burned_filled.tif
     else
         echo "Running fill_depressions.py on < 10m resolution..."
-        ## Temporary fix for pyflwdir package for 1m 
-        # sed -i '88i\        if idxs_ds.dtype == np.uint64:' /usr/local/lib/python3.10/dist-packages/pyflwdir/flwdir.py
-        # sed -i '89i\            self._mv = np.uint64(self._mv)' /usr/local/lib/python3.10/dist-packages/pyflwdir/flwdir.py
         python3 $srcDir/fill_depressions.py -w $tempHucDataDir -r $res
     fi
     Tcount
