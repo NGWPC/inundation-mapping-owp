@@ -78,8 +78,6 @@ def accumulate_flow(
     profile.update(dtype=flowaccum.dtype)
     with rio.open(flow_accumulation_filename, 'w', **profile, BIGTIFF="YES") as dst:
         dst.write(flowaccum, 1)
-
-    dst.close()
     
     # Write the stream pixel raster
     with rio.open(stream_pixel_filename, 'w', **profile, BIGTIFF="YES") as dst2:

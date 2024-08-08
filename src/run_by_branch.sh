@@ -3,12 +3,10 @@
 ## SOURCE BASH FUNCTIONS
 source $srcDir/bash_functions.env
 
+# Uncomment lines below if calling process_branch.sh directly
 #source $outputDestDir/runtime_args.env
 #source $outputDestDir/params.env
 #source $srcDir/bash_variables.env
-
-## INITIALIZE TOTAL TIME TIMER ##
-T_total_start
 
 ## SET VARIABLES AND FILE INPUTS ##
 hucNumber="$1"
