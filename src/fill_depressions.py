@@ -73,10 +73,10 @@ def fill_depressions_pyflwdir(workspace, branch_zero_id):
 
 if __name__ == '__main__':
     # Parse arguments
-    parser = argparse.ArgumentParser(description='Fill depressions')
+    parser = argparse.ArgumentParser(description='Use appropriate python library\'s fill depression method')
     parser.add_argument('-w', '--workspace', help='Workspace', required=True)
     parser.add_argument('-b', '--branch_zero_id', help='If branch_zero_id is provided, update output path', required=False, default=None)
-    parser.add_argument('-r', '--resolution', help='DEM resolution', required=True, type=int)
+    parser.add_argument('-m', '--method', help='Method to use; WBT or pyflwdir', required=True)
 
     # Extract to dictionary and assign to variables.
     args = vars(parser.parse_args())
@@ -84,20 +84,20 @@ if __name__ == '__main__':
     # rename variable inputs
     workspace = args['workspace']
     branch_zero_id = args['branch_zero_id']
-    resolution = args['resolution']
+    method = args['method']
 
-    # Run pyflwdir fill_depressions on 1m DEMs
-    if resolution == 1:
-        print(f"Using Pyflwdir Fill Depressions method on {resolution}m resolution")
-        fill_depressions_pyflwdir(
+    ## Run WBT fill_depressions method
+    if method == "wbt":
+        print(f"Using WBT Fill Depressions method")
+        fill_depressions_wbt(
             workspace,
             branch_zero_id
         )
-    
-    ## Run WBT fill_depressions on 3m DEMs
-    if resolution == 3 or resolution == 5 :
-        print(f"Using WBT Fill Depressions method on {resolution}m resolution")
-        fill_depressions_wbt(
+
+    # Run pyflwdir fill_depressions method (some 3m resolution DEM and 1m DEM)
+    if method == "pyflwdir":
+        print(f"Using Pyflwdir Fill Depressions method")
+        fill_depressions_pyflwdir(
             workspace,
             branch_zero_id
         )

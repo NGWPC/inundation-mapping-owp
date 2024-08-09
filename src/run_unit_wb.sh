@@ -211,16 +211,24 @@ fi
 echo -e $startDiv"Pit remove Burned DEM $hucNumber $branch_zero_id"
 date -u
 Tstart
-if [[ "$res" = "10" ]]; then
-    echo "Running rd_depression_filling on 10m resolution..."
+if [[ "$pit_fill_method" = "richdem" ]]; then
+    echo "Running richdem (rd_depression_filling) Algorithm..."
     rd_depression_filling $tempCurrentBranchDataDir/dem_burned_$branch_zero_id.tif \
         $tempCurrentBranchDataDir/dem_burned_filled_$branch_zero_id.tif
-else
-    echo "Running fill_depressions.py on < 10m resolution..."
+elif [[ "$pit_fill_method" = "wbt" ]]; then
+    echo "Running WBT fill depression Algorithm..."
+    python3 $srcDir/fill_depressions.py -w $tempCurrentBranchDataDir -b $branch_zero_id -m $pit_fill_method
+elif [[ "$pit_fill_method" = "pyflwdir" ]]; then
+    echo "Running pyflwdir fill depression Algorithm..."
     ## Temporary fix for pyflwdir package for 3m/1m 
     sed -i '88i\        if idxs_ds.dtype == np.uint64:' /usr/local/lib/python3.10/dist-packages/pyflwdir/flwdir.py
     sed -i '89i\            self._mv = np.uint64(self._mv)' /usr/local/lib/python3.10/dist-packages/pyflwdir/flwdir.py
-    python3 $srcDir/fill_depressions.py -w $tempCurrentBranchDataDir -b $branch_zero_id -r $res
+    python3 $srcDir/fill_depressions.py -w $tempCurrentBranchDataDir -b $branch_zero_id -m $pit_fill_method
+else 
+    echo "The value provided for pit_fill_method parameter:     $pit_fill_method "
+    echo "   is not valid, see config/params_template.env file for valid options."
+    echo -e "Please check your config file. Exiting ..."
+    exit 1
 fi
 Tcount
 
@@ -229,12 +237,20 @@ if [ "$levelpaths_exist" = "1" ]; then
     echo -e $startDiv"Pit remove Burned DEM $hucNumber (Branches)"
     date -u
     Tstart
-    if [[ "$res" = "10" ]]; then
-        echo "Running rd_depression_filling on 10m resolution..."
+    if [[ "$pit_fill_method" = "richdem" ]]; then
+        echo "Running richdem (rd_depression_filling) Algorithm..."
         rd_depression_filling $tempHucDataDir/dem_burned.tif $tempHucDataDir/dem_burned_filled.tif
+    elif [[ "$pit_fill_method" = "wbt" ]]; then
+        echo "Running WBT fill depression Algorithm..."
+        python3 $srcDir/fill_depressions.py -w $tempCurrentBranchDataDir -b $branch_zero_id -m $pit_fill_method
+    elif [[ "$pit_fill_method" = "pyflwdir" ]]; then
+        echo "Running pyflwdir fill depression Algorithm..."
+        python3 $srcDir/fill_depressions.py -w $tempHucDataDir -m $pit_fill_method
     else
-        echo "Running fill_depressions.py on < 10m resolution..."
-        python3 $srcDir/fill_depressions.py -w $tempHucDataDir -r $res
+        echo "The value provided for pit_fill_method parameter:     $pit_fill_method "
+        echo "   is not valid, see config/params_template.env file for valid options."
+        echo -e "Please check your config file. Exiting ..."
+        exit 1
     fi
     Tcount
 fi
