@@ -9,7 +9,7 @@ import pyflwdir
 
 def fill_depressions_wbt(workspace, branch_zero_id):
     '''
-    Wrapper around whitebox tools fill_depressions methods:
+    Wrapper around whitebox tools fill_depressions method:
     https://www.whiteboxgeo.com/manual/wbt_book/available_tools/hydrological_analysis.html#filldepressions
     '''
     
@@ -34,7 +34,7 @@ def fill_depressions_wbt(workspace, branch_zero_id):
 
 def fill_depressions_pyflwdir(workspace, branch_zero_id):
     '''
-    Wrapper around pyflwdir fill_depressions methods:
+    Wrapper around pyflwdir fill_depressions method:
     https://deltares.github.io/pyflwdir/latest/_generated/pyflwdir.dem.fill_depressions.html#pyflwdir-dem-fill-depressions
     '''
     

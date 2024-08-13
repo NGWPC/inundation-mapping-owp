@@ -29,18 +29,15 @@ fi
 
 huc2Identifier=${hucNumber:0:2}
 
-
 ## SET CRS and input DEM domain
 if [ $huc2Identifier -eq 19 ]; then
     huc_CRS=$ALASKA_CRS
     huc_input_DEM_domain=$input_DEM_domain_Alaska
     dem_domain_filename=DEM_Domain.gpkg
-
 else
     huc_CRS=$DEFAULT_FIM_PROJECTION_CRS
     huc_input_DEM_domain=$input_DEM_domain
     dem_domain_filename=HUC6_dem_domain.gpkg
-
 fi
 
 echo -e $startDiv"Using CRS: $huc_CRS" ## debug
@@ -228,7 +225,7 @@ else
     echo "The value provided for pit_fill_method parameter:     $pit_fill_method "
     echo "   is not valid, see config/params_template.env file for valid options."
     echo -e "Please check your config file. Exiting ..."
-    exit 1
+    exit 22
 fi
 Tcount
 
@@ -242,7 +239,7 @@ if [ "$levelpaths_exist" = "1" ]; then
         rd_depression_filling $tempHucDataDir/dem_burned.tif $tempHucDataDir/dem_burned_filled.tif
     elif [[ "$pit_fill_method" = "wbt" ]]; then
         echo "Running WBT fill depression Algorithm..."
-        python3 $srcDir/fill_depressions.py -w $tempCurrentBranchDataDir -b $branch_zero_id -m $pit_fill_method
+        python3 $srcDir/fill_depressions.py -w $tempHucDataDir -m $pit_fill_method
     elif [[ "$pit_fill_method" = "pyflwdir" ]]; then
         echo "Running pyflwdir fill depression Algorithm..."
         python3 $srcDir/fill_depressions.py -w $tempHucDataDir -m $pit_fill_method
@@ -250,7 +247,7 @@ if [ "$levelpaths_exist" = "1" ]; then
         echo "The value provided for pit_fill_method parameter:     $pit_fill_method "
         echo "   is not valid, see config/params_template.env file for valid options."
         echo -e "Please check your config file. Exiting ..."
-        exit 1
+        exit 22
     fi
     Tcount
 fi
