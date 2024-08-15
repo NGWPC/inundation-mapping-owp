@@ -8,6 +8,7 @@ import sys
 import traceback
 import gc
 import pandas as pd
+import geopandas as gpd
 from inundate_mosaic_wrapper import produce_mosaicked_inundation
 from inundation import inundate
 from mosaic_inundation import Mosaic_inundation
@@ -317,13 +318,19 @@ class Test_Case(Benchmark):
         if not os.path.isdir(test_case_out_dir):
             os.mkdir(test_case_out_dir)
 
+        #load huc geometry
+        huc_gdf_path = os.path.join(self.fim_dir, "wbd.gpkg")
+        huc_gdf = gpd.read_file(huc_gdf_path)
+                
         # Benchmark raster and flow files
-        benchmark_rast = get_bench_asset(catalog,self.benchmark_cat,self.huc,lid,magnitude,"extent")
-        benchmark_flows = get_bench_asset(catalog,self.benchmark_cat,self.huc,lid,magnitude,"flow")
+        benchmark_rast = get_bench_asset(catalog,self.benchmark_cat,"extent",self.huc,huc_gdf,lid,magnitude)
+        benchmark_flows = get_bench_asset(catalog,self.benchmark_cat,"flow",self.huc,huc_gdf,lid,magnitude)
         mask_dict_indiv = self.mask_dict.copy()
+        # TODO pull the domain shapefile out of the AHPS sites STAC items and provide path from there
         if self.is_ahps:  # add domain shapefile to mask for AHPS sites
             domain = os.path.join(self.benchmark_dir, lid, f'{lid}_domain.shp')
             mask_dict_indiv.update({lid: {'path': domain, 'buffer': None, 'operation': 'include'}})
+        # TODO call a function that masks gfm tile in a way that will crop out stuff not in huc then add mask to mask_dict_indiv
         # Check to make sure all relevant files exist
         if (
             not os.path.isfile(benchmark_rast)
@@ -340,7 +347,7 @@ class Test_Case(Benchmark):
                     self.huc,
                     benchmark_flows,
                     inundation_raster=predicted_raster_path,
-                    mask=os.path.join(self.fim_dir, "wbd.gpkg"),
+                    mask=huc_gdf_path,
                     verbose=verbose,
                 )
 

@@ -220,57 +220,57 @@ if __name__ == '__main__':
     # print('all test cases', all_test_cases)
     all_run_metrics = []
 
-    # Set up multiprocessor
-    with ProcessPoolExecutor(max_workers=job_number_huc) as executor:
-        # Loop through all test cases, build the alpha test arguments, and submit them to the process pool
-        executor_dict = {}
+    # # Set up multiprocessor
+    # with ProcessPoolExecutor(max_workers=job_number_huc) as executor:
+    #     # Loop through all test cases, build the alpha test arguments, and submit them to the process pool
+    #     executor_dict = {}
 
-        for test_case_class in all_test_cases:
-            if not os.path.exists(test_case_class.fim_dir):
-                continue
+    #     for test_case_class in all_test_cases:
+    #         if not os.path.exists(test_case_class.fim_dir):
+    #             continue
 
-            fh.vprint(f"test_case_class.test_id is {test_case_class.test_id}", verbose)
+    #         fh.vprint(f"test_case_class.test_id is {test_case_class.test_id}", verbose)
 
-            alpha_test_args = {
-                'calibrated': calibrated,
-                'model': model,
-                'mask_type': 'huc',
-                'overwrite': overwrite,
-                'verbose': gms_verbose if model == 'GMS' else verbose,
-                'gms_workers': job_number_branch,
-            }
+    #         alpha_test_args = {
+    #             'calibrated': calibrated,
+    #             'model': model,
+    #             'mask_type': 'huc',
+    #             'overwrite': overwrite,
+    #             'verbose': gms_verbose if model == 'GMS' else verbose,
+    #             'gms_workers': job_number_branch,
+    #         }
 
-            try:
-                future = executor.submit(test_case_class.alpha_test, **alpha_test_args)
-                executor_dict[future] = test_case_class.test_id
-            except Exception as ex:
-                print(f"*** {ex}")
-                traceback.print_exc()
-                sys.exit(1)
+    #         try:
+    #             future = executor.submit(test_case_class.alpha_test, **alpha_test_args)
+    #             executor_dict[future] = test_case_class.test_id
+    #         except Exception as ex:
+    #             print(f"*** {ex}")
+    #             traceback.print_exc()
+    #             sys.exit(1)
 
-        for future in as_completed(executor_dict):
-            test_id = executor_dict[future]
-            try:
-                all_flat_stats = future.result()
-                if all_flat_stats:
-                    all_run_metrics.extend(all_flat_stats)
-            except Exception as ex:
-                print(f"*** Error processing test case {test_id}: {ex}")
-                traceback.print_exc()
+    #     for future in as_completed(executor_dict):
+    #         test_id = executor_dict[future]
+    #         try:
+    #             all_flat_stats = future.result()
+    #             if all_flat_stats:
+    #                 all_run_metrics.extend(all_flat_stats)
+    #         except Exception as ex:
+    #             print(f"*** Error processing test case {test_id}: {ex}")
+    #             traceback.print_exc()
 
-        # Send the executor to the progress bar and wait for all MS tasks to finish
-        progress_bar_handler(
-            executor_dict, True, f"Running {model} alpha test cases with {job_number_huc} workers"
-        )
-        # wait(executor_dict.keys())
+    #     # Send the executor to the progress bar and wait for all MS tasks to finish
+    #     progress_bar_handler(
+    #         executor_dict, True, f"Running {model} alpha test cases with {job_number_huc} workers"
+    #     )
+    #    # wait(executor_dict.keys())
 
-    # # run test case without futures for debugging
-    # for test_case_class in all_test_cases:
-    #     if not os.path.exists(test_case_class.fim_dir):
-    #         continue
-    #     fh.vprint(f"test_case_class.test_id is {test_case_class.test_id}", verbose)
-    #     all_flat_stats = test_case_class.alpha_test(calibrated=calibrated,model=model,mask_type='huc',overwrite=overwrite,verbose=gms_verbose,gms_workers=1)
-    #     all_run_metrics.extend(all_flat_stats)
+    # run test case without futures for debugging
+    for test_case_class in all_test_cases:
+        if not os.path.exists(test_case_class.fim_dir):
+            continue
+        fh.vprint(f"test_case_class.test_id is {test_case_class.test_id}", verbose)
+        all_flat_stats = test_case_class.alpha_test(calibrated=calibrated,model=model,mask_type='huc',overwrite=overwrite,verbose=gms_verbose,gms_workers=1)
+        all_run_metrics.extend(all_flat_stats)
 
     # Separate the primary key columns
     primary_keys = ['version', 'ver_env','lid','magnitude','huc','benchmark_source','extent_config','calibrated']
