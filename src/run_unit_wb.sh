@@ -4,7 +4,7 @@
 # this file.
 
 ## SOURCE FILE AND FUNCTIONS ##
-# load the various enviro files
+# load the various environment files
 args_file=$outputDestDir/runtime_args.env
 
 source $args_file
@@ -35,15 +35,13 @@ if [ $huc2Identifier -eq 19 ]; then
     huc_CRS=$ALASKA_CRS
     huc_input_DEM_domain=$input_DEM_domain_Alaska
     dem_domain_filename=DEM_Domain.gpkg
-
 else
     huc_CRS=$DEFAULT_FIM_PROJECTION_CRS
     huc_input_DEM_domain=$input_DEM_domain
     dem_domain_filename=HUC6_dem_domain.gpkg
-
 fi
 
-echo -e $startDiv"Using CRS: $huc_CRS" ## debug
+echo -e $startDiv"Using CRS: $huc_CRS"
 
 ## INITIALIZE TOTAL TIME TIMER ##
 T_total_start
