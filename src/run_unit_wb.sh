@@ -3,7 +3,7 @@
 # Do not call this file directly. Call fim_process_unit_wb.sh which calls this file.
 
 ## SOURCE FILE AND FUNCTIONS ##
-# load the various enviro files
+# load the various environment files
 args_file=$outputDestDir/runtime_args.env
 
 source $args_file
@@ -40,7 +40,7 @@ else
     dem_domain_filename=HUC6_dem_domain.gpkg
 fi
 
-echo -e $startDiv"Using CRS: $huc_CRS" ## debug
+echo -e $startDiv"Using CRS: $huc_CRS"
 
 ## INITIALIZE TOTAL TIME TIMER ##
 T_total_start
