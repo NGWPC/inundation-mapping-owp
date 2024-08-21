@@ -7,14 +7,18 @@ import json
 import boto3
 from urllib.parse import urlparse
 from equi7grid.equi7grid import Equi7Grid
-from tools_shared_variables import WORK_DIR
 from collections import defaultdict
 import rasterio
 from rasterio.merge import merge
 from rasterio.mask import mask
+import rioxarray
+from rioxarray.exceptions import NoDataInBounds
+from shapely.geometry import mapping, box
+import xarray as xr
 import geopandas as gpd
 import pandas as pd
 import numpy as np
+from tools_shared_variables import WORK_DIR
 
 def download_s3_asset(asset_href, directory):
     # Parse the S3 URL
@@ -32,67 +36,6 @@ def download_s3_asset(asset_href, directory):
     s3.download_file(bucket_name, key, local_file_path)
 
     return local_file_path
-
-def mosaic_gfm(raster_files, output_directory):
-    # Open all raster files
-    raster_to_mosaic = []
-    for rf in raster_files:
-        raster = rasterio.open(rf)
-        raster_to_mosaic.append(raster)
-
-    # Merge rasters
-    mosaic, out_trans = merge(raster_to_mosaic)
-
-    # Set nodata value for interstitial space
-    mosaic = np.where(mosaic == 0, 9, mosaic)
-
-    # Get metadata from first raster
-    out_meta = raster_to_mosaic[0].meta.copy()
-    out_meta.update({
-        "driver": "GTiff",
-        "height": mosaic.shape[1],
-        "width": mosaic.shape[2],
-        "transform": out_trans,
-        "nodata": 9
-    })
-
-    # Write mosaiced raster
-    output_file = os.path.join(output_directory, "mosaiced.tif")
-    with rasterio.open(output_file, "w", **out_meta) as dest:
-        dest.write(mosaic)
-
-    # Close all opened rasters
-    for raster in raster_to_mosaic:
-        raster.close()
-
-    return output_file
-
-def mask_gfm_mosaic(raster_file, mask_geodataframe, output_directory):
-    with rasterio.open(raster_file) as src:
-        # Reproject geodataframe to match raster CRS if necessary
-        mask_geodataframe = mask_geodataframe.to_crs(src.crs)
-
-        # Get geometries
-        geometries = mask_geodataframe.geometry.values
-
-        # Perform masking
-        out_image, out_transform = mask(src, geometries, crop=True, nodata=-9999)
-
-        out_meta = src.meta.copy()
-        out_meta.update({
-            "driver": "GTiff",
-            "height": out_image.shape[1],
-            "width": out_image.shape[2],
-            "transform": out_transform,
-            "nodata": 9
-        })
-
-        # Write masked raster
-        output_file = os.path.join(output_directory, "masked_mosaiced.tif")
-        with rasterio.open(output_file, "w", **out_meta) as dest:
-            dest.write(out_image)
-
-    return output_file
 
 def process_gfm_flowfiles(event_directory):
     flowfiles = [os.path.join(event_directory, f) for f in os.listdir(event_directory) if f.endswith('.csv')]
@@ -114,7 +57,55 @@ def process_gfm_flowfiles(event_directory):
     output_file = os.path.join(event_directory, "combined_flowfile.csv")
     combined_df.to_csv(output_file, index=False, header=False)
 
-    return output_file
+def mosaic_gfm(raster_files, huc_geom, output_directory, output_filename="mosaiced.tif", nodata_value=255):
+    '''
+    arguments:
+    nodata_value: set this to the nodata_value of the gfm observed water extents (this is usually 255)
+    '''
+    huc_bounds = huc_geom.bounds
+    bounding_box = box(*huc_bounds)
+    
+    bbox_gdf = gpd.GeoDataFrame({"geometry": [bounding_box]}, crs="EPSG:4326")
+    
+    aligned_rasters = []
+    
+    for i, raster_file in enumerate(raster_files):
+        raster = rioxarray.open_rasterio(raster_file, masked=True)
+
+        if i == 0:
+            reference_raster = raster.rio.clip(bbox_gdf.geometry.apply(mapping), bbox_gdf.crs, drop=True, invert=False)
+            reference_raster = reference_raster.where(reference_raster != nodata_value)
+            aligned_rasters.append(reference_raster)
+        else:
+            try:
+                clipped_raster = raster.rio.clip(bbox_gdf.geometry.apply(mapping), bbox_gdf.crs, drop=True, invert=False)
+                aligned_raster = clipped_raster.rio.reproject_match(reference_raster)
+                aligned_raster = aligned_raster.where(aligned_raster != nodata_value)
+                aligned_rasters.append(aligned_raster)
+            except NoDataInBounds:
+                print(f"No data found in bounds for raster {raster_file}. Skipping...")
+
+    if not aligned_rasters:
+        print("No rasters with data in bounds were found.")
+        return None
+
+    stacked_rasters = xr.concat(aligned_rasters, dim="stack")
+    max_raster = stacked_rasters.max(dim="stack", skipna=True)
+    max_raster = max_raster.where(~max_raster.isnull(), nodata_value)
+    huc_gdf = gpd.GeoDataFrame({"geometry": [huc_geom]}, crs="EPSG:4326")
+    
+    if huc_gdf.crs != max_raster.rio.crs:
+        huc_gdf = huc_gdf.to_crs(max_raster.rio.crs)
+
+    max_raster = max_raster.rio.clip(huc_gdf.geometry.apply(mapping), huc_gdf.crs, drop=True, invert=False)
+    max_raster.rio.write_nodata(nodata_value, inplace=True)
+
+    os.makedirs(output_directory, exist_ok=True)
+
+    output_path = os.path.join(output_directory, output_filename)
+    max_raster.rio.to_raster(output_path)
+
+    return output_path
 
 def filter_and_mosaic_gfm(collection, tile_ids, output_directory, huc_geom):
     # Initialize the result dictionaries
@@ -157,7 +148,6 @@ def filter_and_mosaic_gfm(collection, tile_ids, output_directory, huc_geom):
                         print(f"Error downloading flowfile for item {item.id}: {str(e)}")
                 else:
                     print(f"Flowfile asset not found for item {item.id}")
-    pdb.set_trace()
     # Process rasters and flowfiles for each event
     for event_id, tiles in search_result.items():
         event_directory = os.path.join(output_directory, event_id)
@@ -166,12 +156,11 @@ def filter_and_mosaic_gfm(collection, tile_ids, output_directory, huc_geom):
         raster_files = [os.path.join(event_directory, f) for f in os.listdir(event_directory) if f.endswith('.tif')]
         
         if raster_files:
-            mosaiced_file = mosaic_gfm(raster_files, event_directory)
-            masked_file = mask_gfm_mosaic(mosaiced_file, huc_geom, event_directory)
-            mosaiced_files[event_id] = masked_file
+            mosaiced_file = mosaic_gfm(raster_files, huc_geom, event_directory)
         else:
             print(f"No raster files found for event {event_id}")
 
+        pdb.set_trace()
         # Process flowfiles
         flowfile_path = process_gfm_flowfiles(event_directory)
         if flowfile_path:
@@ -179,7 +168,7 @@ def filter_and_mosaic_gfm(collection, tile_ids, output_directory, huc_geom):
         else:
             print(f"No flowfiles found for event {event_id}")
 
-    return mosaiced_files, combined_flowfiles
+    return mosaiced_file, combined_flowfiles
 
 def get_bench_asset(catalog, bench_cat, asset_type, huc, huc_gdf, lid=None, magnitude=None):
     # Find the collection that contains current benchmark category in its href
@@ -237,11 +226,11 @@ def get_bench_asset(catalog, bench_cat, asset_type, huc, huc_gdf, lid=None, magn
         huc_geom = huc_wpj['geometry'].iloc[0]
         wkt_huc = huc_geom.wkt
         ogr_huc = ogr.CreateGeometryFromWkt(wkt_huc)
-        huc_tiles = Equi7Grid(30).search_tiles_in_roi(ogr_huc, coverland=True)
+        huc_tiles = Equi7Grid(20).search_tiles_in_roi(ogr_huc, coverland=True)
         huc_tile_ids = [tile.split('_')[-1] for tile in huc_tiles]
 
         # get a collated masked raster that match the equi7grid tiles in the huc
-        gfm_mosaic_paths, flow_file = filter_and_mosaic_gfm(target_collection, huc_tile_ids, WORK_DIR, huc_wpj)
+        gfm_mosaic_paths, flow_file = filter_and_mosaic_gfm(target_collection, huc_tile_ids, WORK_DIR, huc_geom)
         if asset_type == "extent":
             return gfm_mosaic_paths 
         elif asset_type == "flow":
