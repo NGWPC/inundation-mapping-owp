@@ -157,6 +157,7 @@ def filter_and_mosaic_gfm(collection, tile_ids, output_directory, huc_geom):
         
         if raster_files:
             mosaiced_file = mosaic_gfm(raster_files, huc_geom, event_directory)
+            mosaiced_files[event_id] = mosaiced_file
         else:
             print(f"No raster files found for event {event_id}")
 
