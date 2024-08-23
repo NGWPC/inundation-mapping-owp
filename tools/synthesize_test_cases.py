@@ -146,6 +146,13 @@ if __name__ == '__main__':
         default="all",
     )
     parser.add_argument(
+        '-hu',
+        '--hucs',
+        help='Comma-separated list of HUC8 codes to process',
+        required=False,
+        default="all",
+    )
+    parser.add_argument(
         '-o',
         '--overwrite',
         help='Overwrite all metrics or only fill in missing metrics.',

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import pdb
 import argparse
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -16,7 +16,8 @@ from numba import njit, typed, types
 from rasterio.io import DatasetReader, DatasetWriter
 from rasterio.mask import mask
 from shapely.geometry import shape
-
+from tools_shared_functions import get_local_filepath
+from tools_shared_variables import WORK_DIR 
 
 gpd.options.io_engine = "pyogrio"
 
@@ -143,7 +144,7 @@ def inundate(
 
     # input rem
     if isinstance(rem, str):
-        rem = rasterio.open(rem)
+        rem = rasterio.open(get_local_filepath(rem,WORK_DIR))
     elif isinstance(rem, DatasetReader):
         pass
     else:
@@ -151,7 +152,7 @@ def inundate(
 
     # input catchments grid
     if isinstance(catchments, str):
-        catchments = rasterio.open(catchments)
+        catchments = rasterio.open(get_local_filepath(catchments,WORK_DIR))
     elif isinstance(catchments, DatasetReader):
         pass
     else:
@@ -182,7 +183,7 @@ def inundate(
     if hucs is None:
         pass
     elif isinstance(hucs, str):
-        hucs = fiona.open(hucs, 'r', layer=hucs_layerName)
+        hucs = fiona.open(get_local_filepath(hucs,WORK_DIR), 'r', layer=hucs_layerName)
     elif isinstance(hucs, fiona.Collection):
         pass
     else:
@@ -192,6 +193,11 @@ def inundate(
     # assert (
     #     to_string(hucs.crs) == rem.crs.to_proj4() == catchments.crs.to_proj4()
     # ), "REM, Catchment, and HUCS CRS definitions must match"
+
+    # pdb.set_trace()
+    # download local hydrotable and forecast file if using s3 (will do nothing if file already mounted locally)
+    hydro_table = get_local_filepath(hydro_table,WORK_DIR)
+    forecast = get_local_filepath(forecast,WORK_DIR)
 
     # catchment stages dictionary
     if hydro_table is not None:

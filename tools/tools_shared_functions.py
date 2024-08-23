@@ -23,6 +23,9 @@ from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from shapely.geometry import MultiPolygon, Polygon, shape
 from urllib3.util.retry import Retry
+import boto3
+from urllib.parse import urlparse
+from botocore.exceptions import ClientError
 
 
 gpd.options.io_engine = "pyogrio"
@@ -91,8 +94,7 @@ def compute_contingency_stats_from_rasters(
     lid: str,
     magnitude: str,
     huc: str,
-    archive: bool,
-    benchmark_flows: str = None,
+    archive: str,
     benchmark_raster_path: str = None,
     predicted_raster_path: str = None,
     agreement_raster: str = None,
@@ -104,7 +106,7 @@ def compute_contingency_stats_from_rasters(
     """
     This function contains FIM-specific logic to prepare raster datasets for use in the generic
     get_stats_table_from_binary_rasters() function. This function also calls the generic
-    compute_stats_from_contingency_table() function and writes the results to a DuckDB table.
+    compute_stats_from_contingency_table() function and returns the results as a flattened list.
 
     Parameters
     ----------
@@ -131,11 +133,9 @@ def compute_contingency_stats_from_rasters(
         benchmark_raster_path, predicted_raster_path, agreement_raster, mask_dict=mask_dict
     )
     gc.collect()
-    if archive:
-        ver_env = "archive"
-    else:
-        ver_env = "dev"
-    # Flatten the stats dictionary for insertion into metrics csv
+
+    ver_env = archive
+
     flat_stats = {
         'version': version,
         'ver_env': ver_env,
@@ -147,6 +147,7 @@ def compute_contingency_stats_from_rasters(
         'calibrated': calibrated
     }
 
+    # Flatten the stats dictionary for insertion into metrics csv
     for stats_mode, mode_stats in stats_dictionary.items():
         for stat_name, value in mode_stats.items():
             flat_stats[stat_name] = value
@@ -1652,3 +1653,37 @@ def far(TP, FP, FN, TN=None):
 def mcc(TP, FP, FN, TN=None):
     '''Matthew's Correlation Coefficient'''
     return (TP * TN - FP * FN) / np.sqrt((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN))
+
+
+def get_local_filepath(file_uri, local_directory):
+    if not file_uri.startswith('s3://'):
+        return file_uri
+
+    # Parse the S3 URI
+    parsed_uri = urlparse(file_uri)
+    bucket = parsed_uri.netloc
+    key = parsed_uri.path.lstrip('/')
+
+    # Create an S3 client using environment variables for credentials
+    s3_client = boto3.client('s3')
+
+    # Generate a local filepath
+    filename = os.path.basename(key)
+    local_filepath = os.path.join(local_directory, filename)
+
+    # Ensure the local directory exists
+    os.makedirs(local_directory, exist_ok=True)
+
+    # Download the file from S3 with requester pays option
+    try:
+        s3_client.download_file(
+            Bucket=bucket,
+            Key=key,
+            Filename=local_filepath,
+            ExtraArgs={'RequestPayer': 'requester'}
+        )
+    except ClientError as e:
+        print(f"Error downloading file: {e}")
+        return file_uri  # Return original URI if download fails
+
+    return local_filepath

@@ -326,7 +326,6 @@ class Test_Case(Benchmark):
         benchmark_rast = get_bench_asset(catalog,self.benchmark_cat,"extent",self.huc,huc_gdf,lid,magnitude)
         benchmark_flows = get_bench_asset(catalog,self.benchmark_cat,"flow",self.huc,huc_gdf,lid,magnitude)
         mask_dict_indiv = self.mask_dict.copy()
-        # TODO pull the domain shapefile out of the AHPS sites STAC items and provide path from there
         if self.is_ahps:  # add domain shapefile to mask for AHPS sites
             domain = os.path.join(self.benchmark_dir, lid, f'{lid}_domain.shp')
             mask_dict_indiv.update({lid: {'path': domain, 'buffer': None, 'operation': 'include'}})
