@@ -28,14 +28,44 @@ def mosaic_branch_groups(df: pd.DataFrame, Mosaic_inundation: callable):
         mosaiced_path = Mosaic_inundation(group_df, mosaic_attribute="inundation_rasters",mosaic_output=f"{dirpath}/inundated_extent.tif")
         hand_extent_paths.append(mosaiced_path)
     return hand_extent_paths
-    
+
+def process_gfm_flowfiles(gfm_data: Dict[str, Dict[str, Dict[str, List[str]]]]) -> Dict[str, Dict[str, str]]:
+    combined_flowfiles = {}
+
+    for huc, events in gfm_data.items():
+        combined_flowfiles[huc] = {}
+        for event_id, event_data in events.items():
+            flowfiles = event_data['flowfiles']
+            all_dfs = []
+            
+            for flowfile in flowfiles:
+                df = pd.read_csv(flowfile, header=None, names=['col1', 'col2'])
+                all_dfs.append(df)
+
+            if all_dfs:
+                combined_df = pd.concat(all_dfs, ignore_index=True)
+                # Deduplicate rows based on the first column, keeping the maximum value in the second column
+                combined_df = combined_df.groupby('col1', as_index=False)['col2'].max()
+                
+                # Create output directory if it doesn't exist
+                output_dir = os.path.join(WORK_DIR, 'combined_flowfiles', huc)
+                os.makedirs(output_dir, exist_ok=True)
+                
+                # Write the combined flowfile
+                output_file = os.path.join(output_dir, f"{event_id}_combined_flowfile.csv")
+                combined_df.to_csv(output_file, index=False, header=False)
+                
+                combined_flowfiles[huc][event_id] = output_file
+
+    return combined_flowfiles
+
 def cat_inundate(data: Dict[str, Any], inundate: callable) -> pd.DataFrame:
     """
     Process flood inundation data and generate inundation rasters.
     
     :param data: Nested dictionary containing flood data
-    :param inundate_gms: Function to generate inundation rasters
-    :return: Path to the CSV file containing all output paths
+    :param inundate: Function to generate inundation rasters
+    :return: DataFrame containing all output paths
     """
     output_paths = []
     
@@ -43,6 +73,12 @@ def cat_inundate(data: Dict[str, Any], inundate: callable) -> pd.DataFrame:
         for huc_code, huc_data in hucs.items():
             hand_data = huc_data['hand']
             
+            # Process GFM flowfiles if present
+            if 'gfm' in huc_data:
+                gfm_flowfiles = process_gfm_flowfiles({huc_code: huc_data['gfm']})
+            else:
+                gfm_flowfiles = {}
+
             # Process each REM file
             for i, rem in enumerate(hand_data['rems']):
                 catchment = hand_data['reachRasters'][i]
@@ -55,31 +91,50 @@ def cat_inundate(data: Dict[str, Any], inundate: callable) -> pd.DataFrame:
                 # Process flowfiles for each non-'hand' key
                 for key, value in huc_data.items():
                     if key != 'hand':
-                        for magnitude, magnitude_data in value.items():
-                            for flowfile in magnitude_data['flowfiles']:
-
-                                # Construct output path and directory
-                                output_path = f"{WORK_DIR}/test_cases/{key}/{huc_code}/{version}/{magnitude}/{branch_id}_inundation.tif"
+                        if key == 'gfm':
+                            for event_id, combined_flowfile in gfm_flowfiles.get(huc_code, {}).items():
+                                output_path = f"{WORK_DIR}/test_cases/{key}/{huc_code}/{version}/{event_id}/{branch_id}_inundation.tif"
                                 directory = os.path.dirname(output_path)
                                 os.makedirs(directory, exist_ok=True)
-
                                 inundate(
                                     rem=rem,
                                     catchments=catchment,
                                     catchment_poly=catchment_poly,
                                     hydro_table=hydro_table,
-                                    forecast=flowfile,
-                                    mask_type= filter,
+                                    forecast=combined_flowfile,
+                                    mask_type='filter',
                                     inundation_raster=output_path
                                 )
-
                                 output_paths.append({
                                     'huc8': huc_code,
                                     'branchID': branch_id,
+                                    'event_id': event_id,
                                     'inundation_rasters': output_path
                                 })
+                        else:
+                            # Process other benchmark categories as before
+                            for magnitude, magnitude_data in value.items():
+                                for flowfile in magnitude_data['flowfiles']:
+                                    output_path = f"{WORK_DIR}/test_cases/{key}/{huc_code}/{version}/{magnitude}/{branch_id}_inundation.tif"
+                                    directory = os.path.dirname(output_path)
+                                    os.makedirs(directory, exist_ok=True)
+                                    inundate(
+                                        rem=rem,
+                                        catchments=catchment,
+                                        catchment_poly=catchment_poly,
+                                        hydro_table=hydro_table,
+                                        forecast=flowfile,
+                                        mask_type='filter',
+                                        inundation_raster=output_path
+                                    )
+                                    output_paths.append({
+                                        'huc8': huc_code,
+                                        'branchID': branch_id,
+                                        'magnitude': magnitude,
+                                        'inundation_rasters': output_path
+                                    })
 
-    reach_extents_df = pd.DataFrame(output_paths, columns=['huc8', 'branchID', 'inundation_rasters'])
+    reach_extents_df = pd.DataFrame(output_paths)
     
     return reach_extents_df
 

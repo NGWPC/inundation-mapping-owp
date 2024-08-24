@@ -10,6 +10,12 @@ import cat_eval
 from tools_shared_variables import INPUTS_DIR, WORK_DIR
 from tools_shared_functions import compute_contingency_stats_from_rasters, get_local_filepath
 
+def parse_list_arg(arg_value):
+    if arg_value.lower() == "all":
+        return ["all"]
+    return [item.strip() for item in arg_value.split(',') if item.strip()]
+
+
 if __name__ == '__main__':
     # Parse arguments.
     parser = argparse.ArgumentParser(description='Caches metrics from previous versions of HAND.')
@@ -26,14 +32,14 @@ if __name__ == '__main__':
     parser.add_argument(
         '-b',
         '--benchmark-category',
-        help='A list of benchmark category to specify. Defaults to process all categories.',
+        help='Comma-separated list of benchmark categories to specify. Use "all" for all categories. Don\'t use spaces after commas.',
         required=False,
         default="all",
     )
     parser.add_argument(
         '-hu',
         '--hucs',
-        help='Comma-separated list of HUC8 codes to process',
+        help='Comma-separated list of HUC8 codes to process. Use "all" for all HUCs. Don\'t use spaces after commas.',
         required=False,
         default="all",
     )
@@ -62,14 +68,14 @@ if __name__ == '__main__':
     )
 
     # Assign variables from arguments.
-    args = vars(parser.parse_args())
-    fim_version = args['fim_version']
-    config = args['config']
-    benchmark_category = args['benchmark_category'] #TODO: make sure benchmark_category is read in as a list
-    hucs = args['hucs']
-    calibrated = args['calibrated']
-    model = args['model']
-    master_metrics_csv = args['master_metrics_csv']
+    args = parser.parse_args()
+    fim_version = args.fim_version
+    benchmark_category = parse_list_arg(args.benchmark_category)
+    hucs = parse_list_arg(args.hucs)
+    config = args.config
+    calibrated = args.calibrated
+    model = args.model
+    master_metrics_csv = args.master_metrics_csv
 
     # load in catalogs
     evalcat_path = os.path.join(INPUTS_DIR, "test_eval_cat.json")
@@ -77,8 +83,9 @@ if __name__ == '__main__':
     evalcat = load_eval_cat(evalcat_path)
     benchcat = load_flat_bench(benchcat_path)
 
-    #TODO: add in hucs and fim_version to get_eval_data as well as ["all"] fallbacks for each source
-    filt_cat_dict = get_eval_data(evalcat, benchcat, ["ble"])
+    # mosaic and inundate
+    pdb.set_trace()    
+    filt_cat_dict = get_eval_data(evalcat, benchcat, benchmark_category, hucs)
     reach_extents_df  = cat_eval.cat_inundate(filt_cat_dict, inundate)
     hand_extents = cat_eval.mosaic_branch_groups(reach_extents_df,Mosaic_inundation)
 
