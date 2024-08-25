@@ -84,7 +84,6 @@ if __name__ == '__main__':
     benchcat = load_flat_bench(benchcat_path)
 
     # mosaic and inundate
-    pdb.set_trace()    
     filt_cat_dict = get_eval_data(evalcat, benchcat, benchmark_category, hucs)
     reach_extents_df  = cat_eval.cat_inundate(filt_cat_dict, inundate)
     hand_extents = cat_eval.mosaic_branch_groups(reach_extents_df,Mosaic_inundation)
@@ -93,22 +92,21 @@ if __name__ == '__main__':
     # mask_dict will be moved to a data class with accompanying method to update in cat_eval.py eventually.
     # get local vector paths if not in data
     levee_path = get_local_filepath("s3://noaa-nws-owp-fim/hand_fim/inputs/nld_vectors/Levee_protected_areas.gpkg",WORK_DIR)
-    water_bod_path = get_local_filepath("s3://noaa-nws-owp-fim/hand_fim/inputs/nwm_hydrofabric/nwm_lakes.gpkg",WORK_DIR)    
+    water_bod_path = get_local_filepath("s3://noaa-nws-owp-fim/hand_fim/inputs/nwm_hydrofabric/nwm_lakes.gpkg",WORK_DIR)
 
     # Create list of shapefile paths to use as exclusion areas.
     mask_dict = {
-        'levees': {
-            'path': levee_path,
-            'buffer': None,
-            'operation': 'exclude',
+        "levees": {
+            "path": levee_path,
+            "buffer": None,
+            "operation": "exclude",
         },
-        'waterbodies': {
-            'path': water_bod_path,
-            'buffer': None,
-            'operation': 'exclude',
+        "waterbodies": {
+            "path": water_bod_path,
+            "buffer": None,
+            "operation": "exclude",
         },
     }
-
 eval_metrics_df = cat_eval.get_eval_metrics(
      data=filt_cat_dict ,
      compute_contingency_stats_from_rasters=compute_contingency_stats_from_rasters,
@@ -117,7 +115,8 @@ eval_metrics_df = cat_eval.get_eval_metrics(
      archive=config,
      model=model,
      calibrated=calibrated,
-     work_dir=WORK_DIR
+     work_dir=WORK_DIR,
+     eval_catalog=evalcat
  )
 
 if master_metrics_csv:

@@ -70,10 +70,9 @@ def process_item(item: Dict, benchmark_category: str, result: Dict):
             elif 'flow' in asset_key_lower:
                 result[huc][benchmark_category][magnitude][lid]['flowfiles'].append(href)
 
-def get_huc_tiles(huc: str, eval_catalog: Dict) -> List[str]:
+def get_huc_gdf(huc: str, eval_catalog: Dict) -> gpd.GeoDataFrame:
     huc_shape_path = None
     
-    # Find the HUC shape file path
     for shape_info in eval_catalog.get('huc8Shapes', []):
         if shape_info['huc'] == huc:
             huc_shape_path = os.path.join(shape_info['dir_path'], shape_info['filename'])
@@ -81,10 +80,12 @@ def get_huc_tiles(huc: str, eval_catalog: Dict) -> List[str]:
     
     if not huc_shape_path:
         raise ValueError(f"HUC shape file not found for HUC {huc}")
+    
+    huc_gdf = gpd.read_file(get_local_filepath(huc_shape_path, WORK_DIR))
+    return huc_gdf.to_crs('EPSG:4326')
 
-    # Read the HUC shape file
-    huc_gdf = gpd.read_file(get_local_filepath(huc_shape_path,WORK_DIR))
-    huc_wpj = huc_gdf.to_crs('EPSG:4326')
+def get_huc_tiles(huc: str, eval_catalog: Dict, get_huc_gdf: callable) -> List[str]:
+    huc_wpj = get_huc_gdf(huc, eval_catalog)
     huc_geom = huc_wpj['geometry'].iloc[0]
     wkt_huc = huc_geom.wkt
     ogr_huc = ogr.CreateGeometryFromWkt(wkt_huc)
@@ -149,7 +150,7 @@ def get_stac_catalog_data(stac_catalog: Dict, benchmark_categories: List[str], h
         for collection_id, items in collections:
             if benchmark_category == 'gfm':
                 for huc in hucs:
-                    huc_tile_ids = get_huc_tiles(huc, eval_cat)
+                    huc_tile_ids = get_huc_tiles(huc, eval_cat, get_huc_gdf)
                     gfm_data = filter_gfm({'items': items}, huc_tile_ids)
                     result[huc]['gfm'] = gfm_data
 

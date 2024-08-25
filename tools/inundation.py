@@ -194,7 +194,6 @@ def inundate(
     #     to_string(hucs.crs) == rem.crs.to_proj4() == catchments.crs.to_proj4()
     # ), "REM, Catchment, and HUCS CRS definitions must match"
 
-    # pdb.set_trace()
     # download local hydrotable and forecast file if using s3 (will do nothing if file already mounted locally)
     hydro_table = get_local_filepath(hydro_table,WORK_DIR)
     forecast = get_local_filepath(forecast,WORK_DIR)

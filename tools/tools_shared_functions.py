@@ -406,7 +406,6 @@ def get_stats_table_from_binary_rasters(
     benchmark_raster.rio.write_nodata(10, inplace=True)
 
     del candidate_ndv_mask, benchmark_ndv_mask
-    
     pairing_dictionary = {
         (0, 0): 0,
         (0, 1): 1,
