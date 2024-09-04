@@ -2,10 +2,11 @@
 import pdb
 import argparse
 import os
+import pystac
 
 from inundation import inundate
 from mosaic_inundation import Mosaic_inundation
-from cat_query import get_eval_data, load_eval_cat, load_flat_bench 
+from cat_query import get_eval_data, load_eval_cat, load_stac 
 import cat_eval
 from tools_shared_variables import INPUTS_DIR, WORK_DIR
 from tools_shared_functions import compute_contingency_stats_from_rasters, get_local_filepath
@@ -79,9 +80,9 @@ if __name__ == '__main__':
 
     # load in catalogs
     evalcat_path = os.path.join(INPUTS_DIR, "test_eval_cat.json")
-    benchcat_path = os.path.join(INPUTS_DIR, "flatcat.msgpack")
+    benchcat_path = os.path.join(INPUTS_DIR, "static_cat","catalog.json")
     evalcat = load_eval_cat(evalcat_path)
-    benchcat = load_flat_bench(benchcat_path)
+    benchcat = load_stac(benchcat_path)
 
     # mosaic and inundate
     filt_cat_dict = get_eval_data(evalcat, benchcat, benchmark_category, hucs)
@@ -107,18 +108,18 @@ if __name__ == '__main__':
             "operation": "exclude",
         },
     }
-eval_metrics_df = cat_eval.get_eval_metrics(
-     data=filt_cat_dict ,
-     compute_contingency_stats_from_rasters=compute_contingency_stats_from_rasters,
-     extent_paths=hand_extents,
-     mask_dict=mask_dict,
-     archive=config,
-     model=model,
-     calibrated=calibrated,
-     work_dir=WORK_DIR,
-     eval_catalog=evalcat
- )
+    eval_metrics_df = cat_eval.get_eval_metrics(
+         data=filt_cat_dict ,
+         compute_contingency_stats_from_rasters=compute_contingency_stats_from_rasters,
+         extent_paths=hand_extents,
+         mask_dict=mask_dict,
+         archive=config,
+         model=model,
+         calibrated=calibrated,
+         work_dir=WORK_DIR,
+         eval_catalog=evalcat
+     )
 
-if master_metrics_csv:
-    eval_metrics_df.to_csv(master_metrics_csv, index=False)
-    print(f"eval metrics written to written to {master_metrics_csv}")
+    if master_metrics_csv:
+        eval_metrics_df.to_csv(master_metrics_csv, index=False)
+        print(f"eval metrics written to written to {master_metrics_csv}")

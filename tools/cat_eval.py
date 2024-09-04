@@ -234,6 +234,8 @@ def get_eval_metrics(
                                 continue
                             
                             bench_extents = [mosaiced_extent]
+                        elif key == 'hwm':
+                            bench_extents = magnitude_data['points']
                         else:
                             bench_extents = magnitude_data['extents']
                         
@@ -248,22 +250,38 @@ def get_eval_metrics(
                             if predicted_raster_path is None:
                                 print(f"Warning: No matching predicted raster found for directory: {directory}")
                                 continue
-                        
-                            # Compute contingency stats
-                            metrics = compute_contingency_stats_from_rasters(
-                                version=version,
-                                lid='',  # placeholder for lid until ahps conditionals added in
-                                magnitude=magnitude,
-                                huc=huc_code,
-                                archive=archive,
-                                benchmark_raster_path=bench_extent,
-                                predicted_raster_path=predicted_raster_path,
-                                agreement_raster=os.path.join(directory, "agreement_raster.tif"),
-                                bench_category=key,
-                                extent_config=model,
-                                calibrated=calibrated,
-                                mask_dict=mask_dict
-                            )
+                            if key == 'hwm':                              
+                                metrics = compute_contingency_stats_from_rasters(
+                                    version=version,
+                                    lid='',  # placeholder for lid until ahps conditionals added in
+                                    magnitude=magnitude,
+                                    huc=huc_code,
+                                    archive=archive,
+                                    benchmark_raster_path='',
+                                    predicted_raster_path=predicted_raster_path,
+                                    agreement_raster=os.path.join(directory, "agreement_raster.tif"),
+                                    benchmark_points= bench_extents,
+                                    bench_category=key,
+                                    extent_config=model,
+                                    calibrated=calibrated,
+                                    mask_dict=mask_dict
+                                )
+                            else:
+                                # Compute contingency stats
+                                metrics = compute_contingency_stats_from_rasters(
+                                    version=version,
+                                    lid='',  # placeholder for lid until ahps conditionals added in
+                                    magnitude=magnitude,
+                                    huc=huc_code,
+                                    archive=archive,
+                                    benchmark_raster_path=bench_extent,
+                                    predicted_raster_path=predicted_raster_path,
+                                    agreement_raster=os.path.join(directory, "agreement_raster.tif"),
+                                    bench_category=key,
+                                    extent_config=model,
+                                    calibrated=calibrated,
+                                    mask_dict=mask_dict
+                                )
                             
                             # Save individual site metrics to file
                             with open(output_path, 'w') as f:

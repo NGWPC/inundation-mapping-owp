@@ -17,6 +17,7 @@ import xarray as xr
 from dotenv import load_dotenv
 from geocube.api.core import make_geocube
 from gval import CatStats
+from gval.homogenize.rasterize import _rasterize_data
 from rasterio import features
 from rasterio.warp import Resampling, calculate_default_transform, reproject
 from requests.adapters import HTTPAdapter
@@ -95,9 +96,10 @@ def compute_contingency_stats_from_rasters(
     magnitude: str,
     huc: str,
     archive: str,
-    benchmark_raster_path: str = None,
-    predicted_raster_path: str = None,
+    benchmark_raster_path: str,
+    predicted_raster_path: str,
     agreement_raster: str = None,
+    benchmark_points: gpd.geodataframe = None,
     bench_category: str = None,
     extent_config: str = None,
     calibrated: bool = False,
@@ -123,16 +125,23 @@ def compute_contingency_stats_from_rasters(
     agreement_raster : str, optional
         An agreement raster will be written to this path. 0: True Negatives, 1: False Negative, 2: False Positive,
         3: True Positive.
+    benchmark_points: gpd geodataframe. If analyzing HWM data then provide this instead of a benchmark_raster_path. If you provide this argument then benchmark_raster_path will be disregarded.
     mask_dict : dict, optional
         Dictionary with inclusionary and/or exclusionary mask options.
     """
-
-    # Get statistics table from two rasters.
-    gc.collect()
-    stats_dictionary = get_stats_table_from_binary_rasters(
-        benchmark_raster_path, predicted_raster_path, agreement_raster, mask_dict=mask_dict
-    )
-    gc.collect()
+    # Get statistics table from two rasters or from a candidate raster and a geodataframe of points  
+    if benchmark_points is not None:
+        gc.collect()
+        stats_dictionary = get_stats_table_from_binary_rasters(
+            benchmark_raster_path, predicted_raster_path, agreement_raster, benchmark_points, mask_dict=mask_dict
+        )
+        gc.collect()
+    else:
+        gc.collect()
+        stats_dictionary = get_stats_table_from_binary_rasters(
+            benchmark_raster_path, predicted_raster_path, agreement_raster, mask_dict=mask_dict
+        )
+        gc.collect()
 
     ver_env = archive
 
@@ -354,7 +363,7 @@ def cross_walk_gval_fim(metric_df: pd.DataFrame, cell_area: int, masked_count: i
 
 
 def get_stats_table_from_binary_rasters(
-    benchmark_raster_path: str, candidate_raster_path: str, agreement_raster: str = None, mask_dict: dict = {}
+    benchmark_raster_path: str, candidate_raster_path: str, agreement_raster: str = None, benchmark_points: gpd.GeoDataFrame = None, mask_dict: dict = {}
 ):
     """
     Produces categorical statistics table from 2 rasters and returns it. Also exports an agreement raster classified as:
@@ -384,28 +393,42 @@ def get_stats_table_from_binary_rasters(
 
     """
 
-    # Load benchmark and candidate data
-    benchmark_raster = rxr.open_rasterio(benchmark_raster_path)
-    cell_area = np.abs(np.prod(benchmark_raster.rio.resolution()))
+    # Load candidate data
     candidate_raster = rxr.open_rasterio(candidate_raster_path)
-
-    # nodata masks
     candidate_ndv_mask = candidate_raster.data == candidate_raster.rio.nodata
-    benchmark_ndv_mask = benchmark_raster.data == benchmark_raster.rio.nodata
-
+    # assign pixels
     candidate_raster.data = xr.where(
         (~candidate_ndv_mask) & (candidate_raster >= 0), 1, candidate_raster
     )
     candidate_raster.data = xr.where(
         (~candidate_ndv_mask) & (candidate_raster < 0), 0, candidate_raster
     )
+    # nodata mask
     candidate_raster.data = xr.where(candidate_ndv_mask, 10, candidate_raster)
     candidate_raster.rio.write_nodata(10, inplace=True)
 
-    benchmark_raster.data = xr.where(benchmark_ndv_mask, 10, benchmark_raster)
-    benchmark_raster.rio.write_nodata(10, inplace=True)
+    del candidate_ndv_mask 
 
-    del candidate_ndv_mask, benchmark_ndv_mask
+    # Load benchmark data
+    if benchmark_points is not None:
+        benchmark_raster = _rasterize_data(
+            candidate_map = candidate_raster,
+            benchmark_map=benchmark_points,
+            rasterize_attributes=['class_value']
+            )
+        # nodata mask. Benchmark_raster comes out of _rasterize_data with nans so calling fillna here.
+        benchmark_raster = benchmark_raster.fillna(10)
+        benchmark_raster.rio.write_nodata(10, inplace=True)
+    else:
+        benchmark_raster = rxr.open_rasterio(benchmark_raster_path)
+        benchmark_ndv_mask = benchmark_raster.data == benchmark_raster.rio.nodata
+        benchmark_raster.data = xr.where(benchmark_ndv_mask, 10, benchmark_raster)
+        benchmark_raster.rio.write_nodata(10, inplace=True)
+
+        del benchmark_ndv_mask 
+
+    cell_area = np.abs(np.prod(benchmark_raster.rio.resolution()))
+
     pairing_dictionary = {
         (0, 0): 0,
         (0, 1): 1,
@@ -452,9 +475,7 @@ def get_stats_table_from_binary_rasters(
                     all_masks_df = poly_all_proj
 
                 del poly_all, poly_all_proj
-
     stats_table_dictionary = {}  # Initialize empty dictionary.
-
     c_aligned, b_aligned = candidate_raster.gval.homogenize(benchmark_raster, target_map="candidate")
     candidate_raster.close(); benchmark_raster.close()
     gc.collect()

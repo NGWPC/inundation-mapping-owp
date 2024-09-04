@@ -17,7 +17,8 @@ MAGNITUDE_DICT = {
     "ble": BLE_MAGNITUDE_LIST,
     "usgs": AHPS_MAGNITUDE_LIST,
     "nws": AHPS_MAGNITUDE_LIST,
-    "gfm": ["test"]
+    "gfm": ["test"],
+    "hwm": ["test"]
 }
 PRINTWORTHY_STATS = [
     "CSI",
