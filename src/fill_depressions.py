@@ -6,6 +6,10 @@ import numpy as np
 import rasterio
 import whitebox
 import pyflwdir
+import re
+
+wbt_pattern = re.compile('(^\*|\%$)')
+
 
 def fill_depressions_wbt(workspace, branch_zero_id):
     '''
@@ -15,7 +19,7 @@ def fill_depressions_wbt(workspace, branch_zero_id):
     
     # Set wbt envs
     wbt = whitebox.WhiteboxTools()
-    wbt.set_verbose_mode(False)
+    wbt.set_verbose_mode(True)
 
     if branch_zero_id:
         input_dem = os.path.join(workspace, f'dem_burned_{branch_zero_id}.tif')
@@ -29,8 +33,14 @@ def fill_depressions_wbt(workspace, branch_zero_id):
         output_dem,
         fix_flats=False, 
         flat_increment=None, 
-        max_depth=None
+        max_depth=None,
+        callback=wbt_callback
     )
+
+def wbt_callback(value):
+    if not re.search(wbt_pattern, value):
+        print("Whitebox fill_depressions tool: " + value)
+
 
 def fill_depressions_pyflwdir(workspace, branch_zero_id):
     '''

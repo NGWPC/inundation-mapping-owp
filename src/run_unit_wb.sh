@@ -229,6 +229,14 @@ else
 fi
 Tcount
 
+# Ensure the file dem_burned_filled_0.tif exists before proceeding
+if [[ ! -f $tempCurrentBranchDataDir/dem_burned_filled_$branch_zero_id.tif ]]; then
+   echo "The file: $tempCurrentBranchDataDir/dem_burned_filled_$branch_zero_id.tif does not exist"
+   echo "Exiting ..."
+   exit 2
+fi
+
+
 ## PIT REMOVE BURNED DEM - BRANCHES (NOT 0) (NWM levelpath streams) ##
 if [ "$levelpaths_exist" = "1" ]; then
     echo -e $startDiv"Pit remove Burned DEM $hucNumber (Branches)"
@@ -250,6 +258,13 @@ if [ "$levelpaths_exist" = "1" ]; then
         exit 22
     fi
     Tcount
+fi
+
+# Ensure the file dem_burned_filled.tif exists before proceeding
+if [[ ! -f $tempHucDataDir/dem_burned_filled.tif ]]; then
+   echo "The file: $tempHucDataDir/dem_burned_filled.tif does not exist"
+   echo "Exiting ..."
+   exit 2
 fi
 
 ## D8 FLOW DIR - BRANCH 0 (include all NWM streams) ##
