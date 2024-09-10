@@ -90,6 +90,47 @@ echo "---- Started: `date -u`"
 T_total_start
 post_proc_start_time=`date +%s`
 
+## RUN UPDATE HYDROTABLE AND SRC ##
+# Define the counter file
+
+COUNTER_FILE="${outputDestDir}/post_processing_attempt.txt"
+# Function to clean up
+cleanup() {
+    if [ "$SUCCESS" = true ]; then
+        if [ -f "$COUNTER_FILE" ]; then
+            COUNTER=$(cat "$COUNTER_FILE")
+            if [ "$COUNTER" -eq 1 ]; then
+                echo "Counter is 1. Removing the counter file."
+                rm "$COUNTER_FILE"
+            fi
+        fi
+    fi
+}
+
+# Set up trap to call cleanup on EXIT, ERR, and INT (interrupt signal)
+trap cleanup EXIT ERR INT
+# Initialize the counter file if it doesn't exist
+if [ ! -f "$COUNTER_FILE" ]; then
+    echo 0 > "$COUNTER_FILE"
+fi
+
+# Read the current counter value
+COUNTER=$(cat "$COUNTER_FILE")
+
+# Increment the counter
+COUNTER=$((COUNTER + 1))
+
+# Save the new counter value
+echo "$COUNTER" > "$COUNTER_FILE"
+
+# Check if the counter is greater than one
+if [ "$COUNTER" -gt 1 ]; then
+    # Execute the Python file
+    echo "Updating hydroTable & scr_full_crosswalked for branches"
+    python3 $srcDir/update_htable_src.py -d $outputDestDir
+else
+    echo "Execution count is $COUNTER, not executing the update_htable_src.py file."
+fi
 
 ## AGGREGATE BRANCH LISTS INTO ONE ##
 echo -e $startDiv"Start branch aggregation"
@@ -218,8 +259,13 @@ python3 $toolsDir/combine_crosswalk_tables.py \
 Tcount
 date -u
 
-find $outputDestDir -type d -exec chmod -R 777 {} +
-find $outputDestDir -type f -exec chmod -R 777 {} +
+echo -e $startDiv"Resetting Permissions"
+Tstart
+    find $outputDestDir/logs/ -type d -exec chmod -R 777 {} +
+    find $outputDestDir/branch_errors/ -type d -exec chmod -R 777 {} +
+    find $outputDestDir/unit_errors/ -type d -exec chmod -R 777 {} +
+    find $outputDestDir -type f -exec chmod 777 {} +  # just root level files
+Tcount
 
 echo
 echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
@@ -227,3 +273,5 @@ echo "---- End of fim_post_processing"
 echo "---- Ended: `date -u`"
 Calc_Duration $post_proc_start_time
 echo
+
+SUCCESS=true
