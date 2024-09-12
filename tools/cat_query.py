@@ -78,41 +78,36 @@ def process_item(item: pystac.Item, benchmark_category: str, result: Dict):
             elif 'flow' in asset_key_lower:
                 result[huc][benchmark_category][magnitude][lid]['flowfiles'].append(href)
 
-# filter hwm collection
+# Filter HWM collection
 def filter_hwm(collection: pystac.Collection, hucs: List[str]) -> Dict[str, Dict[str, Dict[str, Union[List[str], gpd.GeoDataFrame]]]]:
     result = defaultdict(lambda: defaultdict(dict))
     
-    for subcollection in collection.get_children():
-        subcollection_id = subcollection.id.replace("-collection", "")
-        matching_items = []
+    # Iterate over items in the top-level collection
+    for item in collection.get_items():
+        item_id = item.id
+        item_hucs = item.properties.get("hucs", [])
+        matching_hucs = [huc for huc in item_hucs if huc in hucs]
         
-        # Check if any items in the subcollection match the given HUCs
-        for item in subcollection.get_items():
-            item_huc = item.properties.get("HUC8")
-            if item_huc[0] in hucs:
-                matching_items.append(item)
-        
-        # If we have matching items, process the subcollection
-        if matching_items:
-            # Get flowfile if it exists and doesn't contain "None"
-            flowfile_asset = next((asset for asset_key, asset in subcollection.assets.items() 
+        # If the item matches any of the provided HUCs, process it
+        if matching_hucs:
+            # Get flowfile asset if it exists and doesn't contain "None" in the href
+            flowfile_asset = next((asset for asset_key, asset in item.assets.items() 
                                    if "flowfile" in asset_key.lower()), None)
             if flowfile_asset and "None" not in flowfile_asset.href:
-                # Process multipoint geometry
-                if "geometry" in subcollection.extra_fields:
-                    geometry = subcollection.extra_fields["geometry"]
-                    if geometry["type"] == "MultiPoint":
-                        points = [Point(coord) for coord in geometry["coordinates"]]
-                        gdf = gpd.GeoDataFrame(geometry=points, crs="EPSG:4326")
-                        # Add attribute that marks presence of water for gval
-                        gdf['class_value'] = 1
+                # Process item's geometry
+                geometry = item.geometry
+                if geometry and geometry["type"] == "MultiPoint":
+                    points = [Point(coord) for coord in geometry["coordinates"]]
+                    gdf = gpd.GeoDataFrame(geometry=points, crs="EPSG:4326")
+                    # Add attribute that marks presence of water for gval
+                    gdf['class_value'] = 1
 
-                        # Add results for each matching HUC
-                        for huc in set(item.properties.get("HUC8")[0] for item in matching_items):
-                            result[huc][subcollection_id] = {
-                                "flowfiles": [flowfile_asset.href],
-                                "points": gdf
-                            }
+                    # Add results for each matching HUC
+                    for huc in matching_hucs:
+                        result[huc][item_id] = {
+                            "flowfiles": [flowfile_asset.href],
+                            "points": gdf
+                        }
     
     return defaultdict_to_dict(result)
 

@@ -43,8 +43,6 @@ def mosaic_gfm(raster_files, huc_gdf, output_directory, output_filename="mosaice
                     clipped_raster = clipped_raster.rio.reproject_match(reference_raster)
                     clipped_raster = clipped_raster.where(clipped_raster < 5)
                 aligned_rasters.append(clipped_raster)
-            else:
-                # print(f"No data found in bounds for raster {raster_file}. Skipping...")
         except Exception as e:
             print(f"Error processing raster {raster_file}: {str(e)}. Skipping...")
     
