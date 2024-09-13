@@ -194,15 +194,26 @@ def inundate(
     #     to_string(hucs.crs) == rem.crs.to_proj4() == catchments.crs.to_proj4()
     # ), "REM, Catchment, and HUCS CRS definitions must match"
 
-    # download local hydrotable and forecast file if using s3 (will do nothing if file already mounted locally)
-    hydro_table = get_local_filepath(hydro_table,WORK_DIR)
-    forecast = get_local_filepath(forecast,WORK_DIR)
+    # Handle hydro_table and forecast
+    if isinstance(hydro_table, str):
+        hydro_table = get_local_filepath(hydro_table, WORK_DIR)
+    elif isinstance(hydro_table, pd.DataFrame):
+        pass  # hydro_table is already a DataFrame
+    else:
+        raise TypeError("hydro_table must be a file path or a pandas DataFrame")
+
+    if isinstance(forecast, str):
+        forecast = get_local_filepath(forecast, WORK_DIR)
+    elif isinstance(forecast, pd.DataFrame):
+        pass  # forecast is already a DataFrame
+    else:
+        raise TypeError("forecast must be a file path or a pandas DataFrame")
 
     # catchment stages dictionary
     if hydro_table is not None:
         catchmentStagesDict, hucSet = __subset_hydroTable_to_forecast(hydro_table, forecast, subset_hucs)
     else:
-        raise TypeError("Pass hydro table csv")
+        raise TypeError("Pass hydro table csv or pandas DataFrame")
 
     if catchmentStagesDict is not None:
         if src_table is not None:
@@ -722,18 +733,23 @@ def create_src_subset_csv(hydro_table, catchmentStagesDict, src_table):
     src_df = src_df.reset_index()
     src_df.columns = ['HydroID', 'stage_inund']
     htable_req_cols = ['HUC', 'feature_id', 'HydroID', 'stage', 'discharge_cms', 'LakeID']
-    df_htable = pd.read_csv(
-        hydro_table,
-        dtype={
-            'HydroID': int,
-            'HUC': object,
-            'branch_id': int,
-            'last_updated': object,
-            'submitter': object,
-            'obs_source': object,
-        },
-        usecols=htable_req_cols,
-    )
+    if isinstance(hydro_table, str):
+        df_htable = pd.read_csv(
+            hydro_table,
+            dtype={
+                'HydroID': int,
+                'HUC': object,
+                'branch_id': int,
+                'last_updated': object,
+                'submitter': object,
+                'obs_source': object,
+            },
+            usecols=htable_req_cols,
+        )
+    elif isinstance(hydro_table, pd.DataFrame):
+        df_htable = hydro_table.reset_index()[htable_req_cols]
+    else:
+        raise TypeError("Pass path to hydro-table csv or Pandas DataFrame")
     df_htable = df_htable.merge(src_df, how='left', on='HydroID')
     df_htable['find_match'] = (df_htable['stage'] - df_htable['stage_inund']).abs()
     df_htable = df_htable.loc[df_htable.groupby('HydroID')['find_match'].idxmin()].reset_index(drop=True)
@@ -755,8 +771,8 @@ if __name__ == '__main__':
         required=True,
     )
     parser.add_argument('-b', '--catchment-poly', help='catchment_vector', required=True)
-    parser.add_argument('-t', '--hydro-table', help='Hydro-table in csv file format', required=True)
-    parser.add_argument('-f', '--forecast', help='Forecast discharges in CMS as CSV file', required=True)
+    parser.add_argument('-t', '--hydro-table', help='Hydro-table in csv file format or DataFrame', required=True)
+    parser.add_argument('-f', '--forecast', help='Forecast discharges in CMS as CSV file or DataFrame', required=True)
     parser.add_argument(
         '-u',
         '--hucs',

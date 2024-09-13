@@ -73,7 +73,6 @@ def gen_retro_fim(hydrofabric_dir: str, fim_version: str, huc: str, date_range: 
     # Save flowfile
     flowfile_path = os.path.join(WORK_DIR, huc, f"{huc}_flowfile.csv")
     os.makedirs(os.path.dirname(flowfile_path), exist_ok=True)
-    pdb.set_trace()
     flowfile.to_csv(flowfile_path, index=False)
     
     produce_mosaicked_inundation(

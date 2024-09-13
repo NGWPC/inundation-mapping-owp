@@ -47,7 +47,7 @@ def mosaic_gfm(raster_files, huc_gdf, output_directory, output_filename="mosaice
             print(f"Error processing raster {raster_file}: {str(e)}. Skipping...")
     
     if not aligned_rasters:
-        print("No rasters with data in bounds were found.")
+        # print("No rasters with data in bounds were found.")
         return None
     
     stacked_rasters = xr.concat(aligned_rasters, dim="band")

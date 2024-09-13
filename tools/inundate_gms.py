@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import pdb
 import argparse
 import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -9,7 +9,7 @@ from inundation import NoForecastFound, hydroTableHasOnlyLakes, inundate
 from tqdm import tqdm
 
 from utils.shared_functions import FIM_Helpers as fh
-
+from tools_shared_variables import WORK_DIR
 
 def Inundate_gms(
     hydrofabric_dir,
@@ -82,6 +82,11 @@ def Inundate_gms(
     branch_ids = [None] * number_of_branches
 
     executor_generator = {executor.submit(inundate, **inp): ids for inp, ids in inundate_input_generator}
+    # doing this for debugging purposes
+    # pdb.set_trace()
+    # for inp, ids in inundate_input_generator:
+    #     inundate(**inp)
+
     idx = 0
     for future in tqdm(
         as_completed(executor_generator),
@@ -202,7 +207,9 @@ def __inundate_gms_generator(
                 usecols=htable_req_cols,
             )
             hydroTable_all.set_index(["HUC", "feature_id", "HydroID"], inplace=True)
-            hydroTable_branch = hydroTable_all.loc[hydroTable_all["branch_id"] == int(branch_id)]
+            hydroTable_branch_gdf = hydroTable_all.loc[hydroTable_all["branch_id"] == int(branch_id)]
+            hydroTable_branch = os.path.join(WORK_DIR, f"hydroTable_{branch_id}.csv")
+            hydroTable_branch_gdf.to_csv(hydroTable_branch, index=True)
         else:
             # Earlier FIM4 versions only have branch level hydrotables
             hydroTable_branch = os.path.join(branch_dir, f"hydroTable_{branch_id}.csv")
