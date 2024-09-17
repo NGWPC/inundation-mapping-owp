@@ -11,7 +11,7 @@ This software uses the Height Above Nearest Drainage (HAND) method to generate R
 # FIM Version 4
 
 ## Computational Requirements
-A system with a minumum of 36GiB of RAM and 4 cores/threads is necessary to execute the code as is. If a system with 36GiB of RAM is not available to you, you can alter the `GDAL_CACHEMAX` value (in bytes) set in [`agreedem.py`](src/agreedem.py)
+A system with a minumum of 36GiB of RAM and 4 cores/threads is necessary to execute the code as is. If a system with 36GiB of RAM is not available to you, you can alter the `GDAL_CACHEMAX` value (in bytes) set in [`agreedem.py`](src/agreedem.py) & [`unique_pixel_and_allocation.py`](src/unique_pixel_and_allocation.py)
 
 ## Accessing Data through ESIP S3 Bucket
 The latest national generated HAND data and a subset of the inputs can be found in an Amazon S3 Bucket hosted by [Earth Science Information Partners (ESIP)](https://www.esipfed.org/). These data can be accessed using the AWS CLI tools. Please contact Carson Pruitt (carson.pruitt@noaa.gov) or Fernando Salas (fernando.salas@noaa.gov) if you experience issues with permissions.
