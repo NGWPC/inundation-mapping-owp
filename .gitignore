@@ -16,3 +16,4 @@ config/*.swp
 **/*_pytest.py
 .private/
 cache/
+eval-scripts-image.tar
