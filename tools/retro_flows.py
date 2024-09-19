@@ -71,7 +71,7 @@ def gen_retro_fim(hydrofabric_dir: str, fim_version: str, huc: str, date_range: 
     flowfile = create_flowfile(ds, feature_ids, peak_time)
     
     # Save flowfile
-    flowfile_path = os.path.join(WORK_DIR, huc, f"{huc}_flowfile.csv")
+    flowfile_path = os.path.join(WORK_DIR, huc, f"{huc}_flowfile_{start_time}_{end_time}.csv")
     os.makedirs(os.path.dirname(flowfile_path), exist_ok=True)
     flowfile.to_csv(flowfile_path, index=False)
     
