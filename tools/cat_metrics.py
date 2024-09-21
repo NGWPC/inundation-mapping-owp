@@ -79,8 +79,8 @@ if __name__ == '__main__':
     master_metrics_csv = args.master_metrics_csv
 
     # load in catalogs
-    evalcat_path = os.path.join(INPUTS_DIR, "test_eval_cat.json")
-    benchcat_path = os.path.join(INPUTS_DIR, "static_cat","catalog.json")
+    evalcat_path = os.path.join("/data/", "test_oe_cat.json")
+    benchcat_path = os.path.join("/data/", "bench_stac","catalog.json")
     evalcat = load_eval_cat(evalcat_path)
     benchcat = load_stac(benchcat_path)
 
@@ -92,8 +92,8 @@ if __name__ == '__main__':
     #make mask_dict
     # mask_dict will be moved to a data class with accompanying method to update in cat_eval.py eventually.
     # get local vector paths if not in data
-    levee_path = get_local_filepath("s3://noaa-nws-owp-fim/hand_fim/inputs/nld_vectors/Levee_protected_areas.gpkg",WORK_DIR)
-    water_bod_path = get_local_filepath("s3://noaa-nws-owp-fim/hand_fim/inputs/nwm_hydrofabric/nwm_lakes.gpkg",WORK_DIR)
+    levee_path = get_local_filepath("/data/nld_vectors/Levee_protected_areas.gpkg",WORK_DIR)
+    water_bod_path = get_local_filepath("/data/nwm_hydrofabric/nwm_lakes.gpkg",WORK_DIR)
 
     # Create list of shapefile paths to use as exclusion areas.
     mask_dict = {

@@ -3,6 +3,8 @@ import pdb
 import pandas as pd
 from typing import Dict, Any, List
 import json
+import tempfile
+import requests
 import numpy as np
 import geopandas as gpd
 from shapely.geometry import box
@@ -28,7 +30,16 @@ def mosaic_gfm(raster_files, huc_gdf, output_directory, output_filename="mosaice
     
     for raster_file in raster_files:
         try:
-            raster = rioxarray.open_rasterio(raster_file, masked=True)
+            # tempfile needed since using an http server for data that can't handle range reads off the raster cogs. Won't be necessary once production http server being used to serve assets.
+            with tempfile.NamedTemporaryFile(suffix=".tif", delete=True) as tmp_file:
+                # Download the COG file and save it to the temporary file
+                response = requests.get(raster_file)
+                tmp_file.write(response.content)
+                # Ensure all data is written to the file
+                tmp_file.flush()
+                # Open the temporary file with rioxarray
+                raster = rioxarray.open_rasterio(tmp_file.name, masked=True)
+
             clipped_raster = raster.rio.clip(bbox_gdf.geometry.apply(mapping), bbox_gdf.crs, drop=True, invert=False)
             
             if clipped_raster.rio.nodata is not None:
@@ -180,6 +191,7 @@ def cat_inundate(data: Dict[str, Any], inundate: callable) -> pd.DataFrame:
                                     output_path = f"{WORK_DIR}/test_cases/{key}/{huc_code}/{version}/{magnitude}/{branch_id}_inundation.tif"
                                     directory = os.path.dirname(output_path)
                                     os.makedirs(directory, exist_ok=True)
+                                    
                                     inundate(
                                         rem=rem,
                                         catchments=catchment,
