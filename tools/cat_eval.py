@@ -55,7 +55,8 @@ def mosaic_gfm(raster_files, huc_gdf, output_directory, output_filename="mosaice
                     clipped_raster = clipped_raster.where(clipped_raster < 5)
                 aligned_rasters.append(clipped_raster)
         except Exception as e:
-            print(f"Error processing raster {raster_file}: {str(e)}. Skipping...")
+            #print(f"Skipping processing raster {raster_file}: {str(e)}.")
+            pass
     
     if not aligned_rasters:
         # print("No rasters with data in bounds were found.")
@@ -96,7 +97,7 @@ def mosaic_branch_groups(df: pd.DataFrame, Mosaic_inundation: callable):
         group_df = group_df.reset_index(drop=True).drop('dirpath', axis=1)
         
         # Call the process function with the group DataFrame and dirpath
-        mosaiced_path = Mosaic_inundation(group_df, mosaic_attribute="inundation_rasters",mosaic_output=f"{dirpath}/inundated_extent.tif")
+        mosaiced_path = Mosaic_inundation(group_df, mosaic_attribute="inundation_rasters",mosaic_output=f"{dirpath}/inundated_extent.tif",remove_inputs=True)
         hand_extent_paths.append(mosaiced_path)
     return hand_extent_paths
 
