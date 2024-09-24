@@ -122,4 +122,4 @@ if __name__ == '__main__':
 
     if master_metrics_csv:
         eval_metrics_df.to_csv(master_metrics_csv, index=False)
-        print(f"eval metrics written to written to {master_metrics_csv}")
+        print(f"eval metrics written to {master_metrics_csv}")

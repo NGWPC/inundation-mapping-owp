@@ -241,7 +241,7 @@ def get_eval_metrics(
                             mosaiced_extent = mosaic_gfm(magnitude_data['extents'], huc_gdf, output_directory, "gfm_mosaiced.tif")
                             
                             if mosaiced_extent is None:
-                                print(f"Warning: Benchmark mosaicking failed for GFM extents in HUC {huc_code}, magnitude {magnitude}")
+                                print(f"Warning: Benchmark mosaicking failed for GFM extents in HUC {huc_code}, event {magnitude}")
                                 continue
                             
                             bench_extents = [mosaiced_extent]

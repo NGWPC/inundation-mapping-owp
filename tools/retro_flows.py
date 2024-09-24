@@ -89,8 +89,8 @@ if __name__ == "__main__":
     parser.add_argument("--huc", required=True, help="HUC code")
     parser.add_argument("--date-range", required=True, nargs=2, help="Date range (start end)")
     parser.add_argument("--hydrofabric-dir", required=False, default = OUTPUTS_DIR, help="Path to hydrofabric directory")
-    parser.add_argument("--huc-shapes", required=False, default = os.path.join(INPUTS_DIR,'wbd','WBD_National.gpkg'), help="Path to huc gpkg")
-    parser.add_argument("--flow-feat", required=False, default = os.path.join(INPUTS_DIR,'nwm_hydrofabric',"nwm_flows.gpkg"), help="Path to flow features gpkg")
+    parser.add_argument("--huc-shapes", required=False, default = os.path.join('/data','wbd','WBD_National.gpkg'), help="Path to huc gpkg")
+    parser.add_argument("--flow-feat", required=False, default = os.path.join('/data','nwm_hydrofabric',"nwm_flows.gpkg"), help="Path to flow features gpkg")
 
     # Load NWM flows and HUC8 geodataframes
     args = parser.parse_args()
