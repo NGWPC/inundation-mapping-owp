@@ -1,7 +1,6 @@
 #!/bin/bash -e
 
-# Do not call this file directly. Call fim_process_unit_wb.sh which calls
-# this file.
+# Do not call this file directly. Call fim_process_unit_wb.sh which calls this file.
 
 ## SOURCE FILE AND FUNCTIONS ##
 # load the various environment files
@@ -23,12 +22,12 @@ if [ "$input_DEM_source" = "seamless_10m" ]; then
 elif [ "$input_DEM_source" = "tiles_1m" ]; then
     input_DEM=$input_DEM_tiles
 else
-    echo -e "input_DEM_source is not set to a valid option. Only 'seamless_10m' or 'tiles_1m' are valid options. Please check your config file. Exiting ..."
+    echo -e "input_DEM_source is not set to a valid option. Only 'seamless_10m' or 'tiles_1m' are valid options."
+    echo -e "Please check your config file. Exiting ..."
     exit 1
 fi
 
 huc2Identifier=${hucNumber:0:2}
-
 
 ## SET CRS and input DEM domain
 if [ $huc2Identifier -eq 19 ]; then
@@ -207,13 +206,65 @@ fi
 
 ## PIT REMOVE BURNED DEM - BRANCH 0 (include all NWM streams) ##
 echo -e $startDiv"Pit remove Burned DEM $hucNumber $branch_zero_id"
-rd_depression_filling $tempCurrentBranchDataDir/dem_burned_$branch_zero_id.tif \
-    $tempCurrentBranchDataDir/dem_burned_filled_$branch_zero_id.tif
+date -u
+Tstart
+if [[ "$pit_fill_method" = "richdem" ]]; then
+    echo "Running richdem (rd_depression_filling) Algorithm..."
+    rd_depression_filling $tempCurrentBranchDataDir/dem_burned_$branch_zero_id.tif \
+        $tempCurrentBranchDataDir/dem_burned_filled_$branch_zero_id.tif
+elif [[ "$pit_fill_method" = "wbt" ]]; then
+    echo "Running WBT fill depression Algorithm..."
+    python3 $srcDir/fill_depressions.py -w $tempCurrentBranchDataDir -b $branch_zero_id -m $pit_fill_method
+elif [[ "$pit_fill_method" = "pyflwdir" ]]; then
+    echo "Running pyflwdir fill depression Algorithm..."
+    ## Temporary fix for pyflwdir package for 3m/1m 
+    sed -i '88i\        if idxs_ds.dtype == np.uint64:' /usr/local/lib/python3.10/dist-packages/pyflwdir/flwdir.py
+    sed -i '89i\            self._mv = np.uint64(self._mv)' /usr/local/lib/python3.10/dist-packages/pyflwdir/flwdir.py
+    python3 $srcDir/fill_depressions.py -w $tempCurrentBranchDataDir -b $branch_zero_id -m $pit_fill_method
+else 
+    echo "The value provided for pit_fill_method parameter:     $pit_fill_method "
+    echo "   is not valid, see config/params_template.env file for valid options."
+    echo -e "Please check your config file. Exiting ..."
+    exit 22
+fi
+Tcount
+
+# Ensure the file dem_burned_filled_0.tif exists before proceeding
+if [[ ! -f $tempCurrentBranchDataDir/dem_burned_filled_$branch_zero_id.tif ]]; then
+   echo "The file: $tempCurrentBranchDataDir/dem_burned_filled_$branch_zero_id.tif does not exist"
+   echo "Exiting ..."
+   exit 2
+fi
+
 
 ## PIT REMOVE BURNED DEM - BRANCHES (NOT 0) (NWM levelpath streams) ##
 if [ "$levelpaths_exist" = "1" ]; then
     echo -e $startDiv"Pit remove Burned DEM $hucNumber (Branches)"
-    rd_depression_filling $tempHucDataDir/dem_burned.tif $tempHucDataDir/dem_burned_filled.tif
+    date -u
+    Tstart
+    if [[ "$pit_fill_method" = "richdem" ]]; then
+        echo "Running richdem (rd_depression_filling) Algorithm..."
+        rd_depression_filling $tempHucDataDir/dem_burned.tif $tempHucDataDir/dem_burned_filled.tif
+    elif [[ "$pit_fill_method" = "wbt" ]]; then
+        echo "Running WBT fill depression Algorithm..."
+        python3 $srcDir/fill_depressions.py -w $tempHucDataDir -m $pit_fill_method
+    elif [[ "$pit_fill_method" = "pyflwdir" ]]; then
+        echo "Running pyflwdir fill depression Algorithm..."
+        python3 $srcDir/fill_depressions.py -w $tempHucDataDir -m $pit_fill_method
+    else
+        echo "The value provided for pit_fill_method parameter:     $pit_fill_method "
+        echo "   is not valid, see config/params_template.env file for valid options."
+        echo -e "Please check your config file. Exiting ..."
+        exit 22
+    fi
+    Tcount
+fi
+
+# Ensure the file dem_burned_filled.tif exists before proceeding
+if [[ ! -f $tempHucDataDir/dem_burned_filled.tif ]]; then
+   echo "The file: $tempHucDataDir/dem_burned_filled.tif does not exist"
+   echo "Exiting ..."
+   exit 2
 fi
 
 ## D8 FLOW DIR - BRANCH 0 (include all NWM streams) ##
