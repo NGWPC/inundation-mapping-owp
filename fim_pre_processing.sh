@@ -115,7 +115,7 @@ in
 done
 
 # print usage if arguments empty and no restart
-if [ "$hucList" = "" ] && [ "$restart" = "" ]; then
+if [ "$hucList" = "" ] && [ $restart -eq 0 ]; then
     echo "ERROR: Missing -u Huclist argument"
     usage
     exit 22
@@ -180,7 +180,7 @@ else
 fi
 
 # Safety feature to avoid accidentaly overwrites
-if [ -d $outputDestDir ] && [ $overwrite -eq 0 ] && [ "$restart" = "" ]; then
+if [ -d $outputDestDir ] && [ $overwrite -eq 0 ] && [ $restart -eq 0 ]; then
     echo
     echo "ERROR: Output dir $outputDestDir exists. Use overwrite -o to run."
     echo

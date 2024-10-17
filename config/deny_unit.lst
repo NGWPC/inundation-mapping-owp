@@ -13,7 +13,7 @@ agree_smogrid_zerod.tif
 # branch_id.lst
 # branch_polygons.gpkg
 dem_burned.tif
-dem_burned_filled.tif
+# dem_burned_filled.tif
 dem_meters.tif
 flowdir_d8_burned_filled.tif
 flows_grid_boolean.tif

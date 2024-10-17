@@ -55,8 +55,8 @@ def stream_pixel_zones(stream_pixels, unique_stream_pixels):
     streams_profile.update(dtype='float64')
 
     # Output to raster
-    with rasterio.Env():
-        with rasterio.open(unique_stream_pixels, 'w', **streams_profile) as raster:
+    with rasterio.Env(GDAL_CACHEMAX=36000000000, GDAL_NUM_THREADS=4):
+        with rasterio.open(unique_stream_pixels, 'w', **streams_profile, BIGTIFF="YES") as raster:
             raster.write(stream_pixel_values, 1)
 
     # Compute allocation and proximity grids.
@@ -70,7 +70,7 @@ def stream_pixel_zones(stream_pixels, unique_stream_pixels):
     # Add stream channel ids
     allocation = np.where(allocation > 0, allocation, stream_pixel_values)
 
-    with rasterio.open(allocation_grid, 'w', **allocation_profile) as allocation_ds:
+    with rasterio.open(allocation_grid, 'w', **allocation_profile, BIGTIFF="YES") as allocation_ds:
         allocation_ds.write(allocation, 1)
 
     return distance_grid, allocation_grid

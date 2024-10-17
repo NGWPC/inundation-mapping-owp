@@ -70,7 +70,7 @@ def agreedem(
         vectallo_grid = os.path.join(workspace, 'agree_smogrid_allo.tif')
 
         # Windowed reading/calculating/writing
-        with rasterio.Env():
+        with rasterio.Env(GDAL_CACHEMAX=36000000000, GDAL_NUM_THREADS=4):
             with rasterio.open(smo_output, 'w', **smo_profile, BIGTIFF='YES') as raster:
                 for ji, window in elev.block_windows(1):
                     # read elevation data and mask information
@@ -132,7 +132,7 @@ def agreedem(
             buf_profile.update(dtype='float32')
 
             # Windowed reading/calculating/writing
-            with rasterio.Env():
+            with rasterio.Env(GDAL_CACHEMAX=36000000000, GDAL_NUM_THREADS=4):
                 with rasterio.open(buf_output, 'w', **buf_profile, BIGTIFF='YES') as raster:
                     for ji, window in elev.block_windows(1):
                         # read distance, allocation, and elevation datasets
@@ -168,7 +168,7 @@ def agreedem(
                 bin_buf_output_profile = agree_bufgrid_profile.copy()
                 bin_buf_output_profile.update(dtype='float32')
 
-                with rasterio.Env():
+                with rasterio.Env(GDAL_CACHEMAX=36000000000, GDAL_NUM_THREADS=4):
                     with rasterio.open(bin_buf_output, 'w', **bin_buf_output_profile, BIGTIFF='YES') as raster:
                         for ji, window in agree_bufgrid.block_windows(1):
                             # read distance, allocation, and elevation datasets
@@ -206,7 +206,7 @@ def agreedem(
                 agree_profile.update(dtype='float32')
 
                 # Windowed reading/calculating/writing
-                with rasterio.Env():
+                with rasterio.Env(GDAL_CACHEMAX=36000000000, GDAL_NUM_THREADS=4):
                     with rasterio.open(agree_output, 'w', **agree_profile, BIGTIFF='YES') as raster:
                         for ji, window in elev.block_windows(1):
                             # Read elevation data and mask, distance and allocation grids, and river data.

@@ -396,10 +396,13 @@ def get_stats_table_from_binary_rasters(
     candidate_raster.data = xr.where(
         (~candidate_ndv_mask) & (candidate_raster < 0), 0, candidate_raster
     )
+
     candidate_raster.data = xr.where(candidate_ndv_mask, 10, candidate_raster)
+    candidate_raster.data = candidate_raster.data.astype('uint8')  # Convert dtype to uint8 # Change dtype
     candidate_raster.rio.write_nodata(10, inplace=True)
 
     benchmark_raster.data = xr.where(benchmark_ndv_mask, 10, benchmark_raster)
+    benchmark_raster.data = benchmark_raster.data.astype('uint8')  # Convert dtype to uint8 # Change dtype
     benchmark_raster.rio.write_nodata(10, inplace=True)
 
     del candidate_ndv_mask, benchmark_ndv_mask
@@ -461,6 +464,8 @@ def get_stats_table_from_binary_rasters(
         b_aligned, comparison_function='pairing_dict', pairing_dict=pairing_dictionary
     )
     c_aligned.close(); b_aligned.close()
+    
+    del candidate_raster, benchmark_raster
     gc.collect()
 
     ten_val_mask = agreement_map.data == 10
@@ -484,12 +489,14 @@ def get_stats_table_from_binary_rasters(
     metrics_table = crosstab_table.gval.compute_categorical_metrics(
         positive_categories=[1], negative_categories=[0], metrics="all"
     )
+
     gc.collect()
 
     # Only write the agreement raster if user-specified.
     if agreement_raster != None:
         agreement_map.rio.write_nodata(10, encoded=True) \
-            .rio.to_raster(agreement_raster, dtype=np.int32, driver="COG")
+            .rio.to_raster(agreement_raster, dtype=np.uint8, driver="COG") # Write to uint8 instead of int32
+
 
         # Write legend text file
         legend_txt = os.path.join(os.path.split(agreement_raster)[0], 'read_me.txt')
