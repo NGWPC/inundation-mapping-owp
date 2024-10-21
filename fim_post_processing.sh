@@ -155,7 +155,7 @@ if [ "$bathymetry_adjust" = "True" ]; then
         -fim_dir $outputDestDir \
         -bathy $bathymetry_file \
         -buffer $wbd_buffer \
-        -wbd $inputsDir/wbd/WBD_National_EPSG_5070_WBDHU8_clip_dem_domain.gpkg \
+        -wbd $input_WBD_gdb \
         -j $jobLimit
     Tcount
 fi

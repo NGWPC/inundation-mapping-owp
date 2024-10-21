@@ -176,7 +176,14 @@ def multi_process_hucs(fim_dir, bathy_file, wbd_buffer, wbd, output_suffix, numb
     wbd = gpd.read_file(
         wbd, mask=buffered_bathy, engine="fiona"
     )  # HUCs that could also have bathymetric reaches included
-    hucs_with_bathy = wbd.HUC8.to_list()
+    #hucs_with_bathy = wbd.HUC8.to_list()
+    hucs_with_bathy = wbd.filter(regex='HUC\d{1,2}', axis=1)
+    if len(hucs_with_bathy.columns) > 1:
+        raise ValueError(
+            f"More than one HUC column found in WBD file, {hucs_with_bathy.columns}. Please check the WBD file."
+        )
+    else:
+        hucs_with_bathy = hucs_with_bathy.iloc[:, 0].to_list()
     hucs = [h for h in fim_hucs if h in hucs_with_bathy]
     log_file.write(f"Identified {len(hucs)} HUCs that have bathymetric data: {hucs}\n")
     print(f"Identified {len(hucs)} HUCs that have bathymetric data\n")

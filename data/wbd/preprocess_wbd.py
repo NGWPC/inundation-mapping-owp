@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
+from typing import List
+
 import argparse
 import os
 from pathlib import Path
 
+from tqdm import tqdm
 import geopandas as gpd
 
 from utils.shared_variables import DEFAULT_FIM_PROJECTION_CRS
@@ -12,7 +15,7 @@ from utils.shared_variables import DEFAULT_FIM_PROJECTION_CRS
 gpd.options.io_engine = "pyogrio"
 
 
-def clip_wbd_to_dem_domain(dem: str, wbd_in: str, wbd_out: str, huc_level: int):
+def clip_wbd_to_dem_domain(dem: str, wbd_in: str, wbd_out: str, huc_levels: List[int]):
     """
     Clips Watershed Boundary Dataset (WBD) to DEM domain
 
@@ -24,22 +27,33 @@ def clip_wbd_to_dem_domain(dem: str, wbd_in: str, wbd_out: str, huc_level: int):
         Path to WBD file input
     wbd_out: str
         Path to WBD file output
-    huc_level: int
-        HUC level
+    huc_levels: List of int
+        HUC levels
     """
 
-    # Erase area outside 3DEP domain
-    if Path(wbd_in).is_file() and Path(dem).is_file():
+    # load dem domain
+    dem_domain = gpd.read_file(dem).to_crs(DEFAULT_FIM_PROJECTION_CRS)
+
+    # remove wbd_out if it exists
+    if os.path.exists(wbd_out):
+        os.remove(wbd_out)
+
+    for i, huc_level in tqdm(enumerate(huc_levels), desc='Clipping WBD to DEM domain by layers', total=len(huc_levels)):
+        # Erase area outside 3DEP domain
         layer = f'WBDHU{huc_level}'
 
         # Read input files
-        wbd = gpd.read_file(wbd_in, layer=layer)
-        dem_domain = gpd.read_file(dem)
+        wbd = gpd.read_file(wbd_in, layer=layer).to_crs(DEFAULT_FIM_PROJECTION_CRS)
 
-        wbd = gpd.clip(wbd, dem_domain)
+        # clip
+        wbd = (
+            gpd.clip(wbd, dem_domain)
+            .reset_index(drop=True)
+            .to_crs(DEFAULT_FIM_PROJECTION_CRS)
+        )
 
         # Write output file
-        wbd.to_file(wbd_out, layer=layer, crs=DEFAULT_FIM_PROJECTION_CRS, driver='GPKG')
+        wbd.to_file(wbd_out, layer=layer, index=False)
 
 
 if __name__ == '__main__':
@@ -47,7 +61,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--dem', help='Path to DEM', type=str, required=True)
     parser.add_argument('-w', '--wbd-in', help='Input WBD filename', type=str, required=True)
     parser.add_argument('-o', '--wbd-out', help='Output WBD filename', type=str, required=True)
-    parser.add_argument('-l', '--huc-level', help='HUC level', type=int, required=True)
+    parser.add_argument('-l', '--huc-levels', help='HUC levels (e.g. 6, 8, 10, 12)', type=int, required=True, nargs='+')
 
     args = vars(parser.parse_args())
 
