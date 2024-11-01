@@ -103,7 +103,10 @@ def subset_vector_layers(
     with rio.open(dem_filename) as dem_raster:
         dem_cellsize = max(dem_raster.res)
 
-    wbd = gpd.read_file(wbd_filename, engine="pyogrio", use_arrow=True)
+    huc_length = len(hucCode)
+    layer = f"WBDHU{huc_length}"
+
+    wbd = gpd.read_file(wbd_filename, engine="pyogrio", use_arrow=True, layer=layer)
     dem_domain = gpd.read_file(dem_domain, engine="pyogrio", use_arrow=True)
 
     # Get wbd buffer
@@ -125,7 +128,8 @@ def subset_vector_layers(
         wbd = wbd.overlay(landsea, how='difference')
         wbd.to_file(
             wbd_filename,
-            layer='WBDHU8',
+            #layer='WBDHU8',
+            layer=layer,
             driver=getDriver(wbd_filename),
             index=False,
             crs=huc_CRS,

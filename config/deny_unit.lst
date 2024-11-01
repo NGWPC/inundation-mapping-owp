@@ -32,7 +32,7 @@ nwm_headwaters.gpkg
 # usgs_elev_table.csv
 # usgs_subset_gages.gpkg
 # wbd.gpkg
-# wbd8_clp.gpkg
+# wbd_clp.gpkg
 wbd_buffered.gpkg
 wbd_buffered_streams.gpkg
 HUC6_dem_domain.gpkg

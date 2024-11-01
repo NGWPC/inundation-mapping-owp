@@ -20,7 +20,7 @@ from utils.shared_functions import FIM_Helpers as fh
     Overview:
       This script was created to absolve run_unit_wb.sh from getting the huc level WBD layer, calling
       clip_vectors_to_wbd.py, and clipping the WBD for every run, which added a significant amount of
-      processing time for each HUC8. Using this script, we generate the necessary pre-clipped .gpkg files
+      processing time for each HUC. Using this script, we generate the necessary pre-clipped .gpkg files
       for the rest of the processing steps.
 
       Read in environment variables from src/bash_variabls.env & config/params_template.env.
@@ -30,8 +30,8 @@ from utils.shared_functions import FIM_Helpers as fh
         and placed within the output directory specified as the <outputs_dir> argument.
 
     Usage:
-        generate_pre_clip_fim_huc8.py
-            -n /data/inputs/pre_clip_huc8/24_04_23
+        generate_pre_clip_fim_huc.py
+            -n /data/inputs/pre_clip/24_04_23_hucX
             -u /data/inputs/huc_lists/included_huc8_withAlaska.lst
             -j 6
             -o
@@ -39,8 +39,8 @@ from utils.shared_functions import FIM_Helpers as fh
     Notes:
       If running this script to generate new data, modify the pre_clip_huc_dir variable in
       src/bash_variables.env to the corresponding outputs_dir argument after running and testing this script.
-      The newly generated data should be created in a new folder using the format <year_month_day>
-             (i.e. September 26, 2023 would be 23_09_26)
+      The newly generated data should be created in a new folder using the format <year_month_day_hucLevel>
+             (i.e. September 26, 2023 @ HUC8 would be 23_09_26_huc8)
 '''
 
 srcDir = os.getenv('srcDir')
@@ -114,9 +114,9 @@ def __setup_logger(outputs_dir, huc=None):
     curr_date = datetime_now.strftime("%y%my%d")
 
     if huc is None:
-        log_file_name = f"generate_pre_clip_fim_huc8_{curr_date}.log"
+        log_file_name = f"generate_pre_clip_fim_{curr_date}.log"
     else:
-        log_file_name = f"mp_{huc}_generate_pre_clip_fim_huc8_{curr_date}.log"
+        log_file_name = f"mp_{huc}_generate_pre_clip_fim_{curr_date}.log"
 
     log_file_path = os.path.join(outputs_dir, log_file_name)
 
@@ -138,7 +138,7 @@ def __setup_logger(outputs_dir, huc=None):
     # Print start time
     start_time_string = datetime_now.strftime("%m/%d/%Y %H:%M:%S")
     logging.info('==========================================================================')
-    logging.info("\n generate_pre_clip_fim_huc8.py")
+    logging.info("\n generate_pre_clip_fim_huc.py")
     logging.info(f"\n \t Started: {start_time_string} \n")
 
 
@@ -179,7 +179,7 @@ def __merge_mp_logs(outputs_dir):
 def pre_clip_hucs_from_wbd(outputs_dir, huc_list, number_of_jobs, overwrite):
     '''
     The function is the main driver of the program to iterate and parallelize writing
-    pre-clipped HUC8 vector files.
+    pre-clipped HUC vector files.
 
     Inputs:
     - outputs_dir:                    Output directory to stage pre-clipped vectors.
@@ -312,7 +312,7 @@ def huc_level_clip_vectors_to_wbd(huc, outputs_dir):
     - Use subprocess.run to get the WBD for specified HUC - (ogr2ogr called to generate wbd.gpkg)
     - Subset Vector Layers - (call subset_vector_layers function in data/wbd/clip_vectors_to_wbd.py file)
     - Clip WBD -
-        Creation of wbd8_clp.gpkg & wbd_buffered.gpkg using the executable: "ogr2ogr .... -clipsrc ..."
+        Creation of wbd_clp.gpkg & wbd_buffered.gpkg using the executable: "ogr2ogr .... -clipsrc ..."
 
     Outputs:
     - .gpkg files* dependant on HUC's WBD (*differing amount based on individual huc)
@@ -334,7 +334,7 @@ def huc_level_clip_vectors_to_wbd(huc, outputs_dir):
         # Check whether the HUC is in Alaska or not and assign the CRS and filenames accordingly
         if huc2Identifier == '19':
             huc_CRS = ALASKA_CRS
-            input_NHD_WBHD_layer = 'WBD_National_South_Alaska'
+            input_NHD_WBHD_layer = f'WBDHU{hucUnitLength}'
             input_WBD_filename = input_WBD_gdb_Alaska
             wbd_gpkg_path = f'{inputsDir}/wbd/WBD_National_South_Alaska.gpkg'
         else:
@@ -354,6 +354,12 @@ def huc_level_clip_vectors_to_wbd(huc, outputs_dir):
             input_LANDSEA = f"{inputsDir}/landsea/water_polygons_us.gpkg"
 
         print(f"\n Get WBD {huc}")
+
+        # TODO: hardcoded for now, needs to be input_WBD_filename originally
+        input_WBD_filename = os.path.join(
+            inputsDir, 'wbd',
+            f'WBD_National_EPSG_5070_WBDHU{hucUnitLength}_clip_dem_domain.gpkg'
+        )
 
         # TODO: Use Python API (osgeo.ogr) instead of using ogr2ogr executable
         get_wbd_subprocess = subprocess.run(
@@ -463,10 +469,10 @@ def huc_level_clip_vectors_to_wbd(huc, outputs_dir):
         print(msg)
         logging.info(msg)
 
-        ## Clip WBD8 ##
+        ## Clip WBD ##
         print(f" Creating WBD buffer and clip version {huc}")
 
-        clip_wbd8_subprocess = subprocess.run(
+        clip_wbd_subprocess = subprocess.run(
             [
                 'ogr2ogr',
                 '-f',
@@ -475,7 +481,7 @@ def huc_level_clip_vectors_to_wbd(huc, outputs_dir):
                 huc_CRS,
                 '-clipsrc',
                 f'{huc_directory}/wbd_buffered.gpkg',
-                f'{huc_directory}/wbd8_clp.gpkg',
+                f'{huc_directory}/wbd_clp.gpkg', # TODO: CONSIDER MODIFYING
                 wbd_gpkg_path,
                 input_NHD_WBHD_layer,
             ],
@@ -485,15 +491,15 @@ def huc_level_clip_vectors_to_wbd(huc, outputs_dir):
             universal_newlines=True,
         )
 
-        # msg = clip_wbd8_subprocess.stdout
+        # msg = clip_wbd_subprocess.stdout
         # print(f"{huc} : {msg}")
         # logging.info(f"{huc} : {msg}")
 
-        if clip_wbd8_subprocess.stderr != "":
-            if "ERROR" in clip_wbd8_subprocess.stderr.upper():
+        if clip_wbd_subprocess.stderr != "":
+            if "ERROR" in clip_wbd_subprocess.stderr.upper():
                 msg = (
                     f" - Creating -- {huc_directory}/wbd.gpkg"
-                    f"  ERROR -- details: ({clip_wbd8_subprocess.stderr})"
+                    f"  ERROR -- details: ({clip_wbd_subprocess.stderr})"
                 )
                 print(msg)
                 logging.info(msg)
@@ -523,8 +529,8 @@ if __name__ == '__main__':
         'A plethora gpkg files per huc are generated (see args to subset_vector_layers), and placed within '
         'the output directory specified as the <outputs_dir> argument.',
         usage='''
-            ./generate_pre_clip_fim_huc8.py
-                -n /data/inputs/pre_clip_huc8/24_3_20
+            ./generate_pre_clip_fim_huc.py
+                -n /data/inputs/pre_clip/24_3_20_hucX
                 -u /data/inputs/huc_lists/included_huc8_withAlaska.lst
                 -j 6
                 -o
@@ -535,18 +541,21 @@ if __name__ == '__main__':
         '-n',
         '--outputs_dir',
         help='Directory to output all of the HUC level .gpkg files. Use the format: '
-        '<year_month_day> (i.e. September 26, 2023 would be 23_09_26)',
+        '<year_month_day_hucLevel> (i.e. September 26, 2023 @ HUC8 would be 23_09_26_huc8)',
+        required=True,
     )
-    parser.add_argument('-u', '--huc_list', help='List of HUCs to genereate pre-clipped vectors for.')
+    
+    parser.add_argument('-u', '--huc_list', help='List of HUCs to genereate pre-clipped vectors for.', required=True)
+
     parser.add_argument(
         '-j',
         '--number_of_jobs',
-        help='OPTIONAL: Number of cores/processes (default=4). This is a memory intensive '
+        help='OPTIONAL: Number of cores/processes (default=1). This is a memory intensive '
         'script, and the multiprocessing will crash if too many CPUs are used. It is recommended to provide '
         'half the amount of available CPUs.',
         type=int,
         required=False,
-        default=4,
+        default=1,
     )
     parser.add_argument(
         '-o',

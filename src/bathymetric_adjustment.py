@@ -40,8 +40,8 @@ def correct_rating_for_bathymetry(fim_dir, huc, bathy_file, verbose):
 
     # Load wbd and use it as a mask to pull the bathymetry data
     fim_huc_dir = join(fim_dir, huc)
-    wbd8_clp = gpd.read_file(join(fim_huc_dir, 'wbd8_clp.gpkg'), engine="pyogrio", use_arrow=True)
-    bathy_data = gpd.read_file(bathy_file, mask=wbd8_clp, engine="fiona")
+    wbd_clp = gpd.read_file(join(fim_huc_dir, 'wbd_clp.gpkg'), engine="pyogrio", use_arrow=True)
+    bathy_data = gpd.read_file(bathy_file, mask=wbd_clp, engine="fiona")
     bathy_data = bathy_data.rename(columns={'ID': 'feature_id'})
 
     # Get src_full from each branch
