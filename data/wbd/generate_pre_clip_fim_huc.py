@@ -481,7 +481,7 @@ def huc_level_clip_vectors_to_wbd(huc, outputs_dir):
                 huc_CRS,
                 '-clipsrc',
                 f'{huc_directory}/wbd_buffered.gpkg',
-                f'{huc_directory}/wbd_clp.gpkg', # TODO: CONSIDER MODIFYING
+                f'{huc_directory}/wbd_clp.gpkg',
                 wbd_gpkg_path,
                 input_NHD_WBHD_layer,
             ],
