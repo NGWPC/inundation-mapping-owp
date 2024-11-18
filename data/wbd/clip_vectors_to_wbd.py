@@ -128,7 +128,6 @@ def subset_vector_layers(
         wbd = wbd.overlay(landsea, how='difference')
         wbd.to_file(
             wbd_filename,
-            #layer='WBDHU8',
             layer=layer,
             driver=getDriver(wbd_filename),
             index=False,
