@@ -78,10 +78,17 @@ rm -f $outputDestDir/logs/subdiv_src_.log
 args_file=$outputDestDir/runtime_args.env
 fim_inputs=$outputDestDir/fim_inputs.csv
 
+# get the first line of fim_inputs.csv and first CSV column
+hucNumber=$(head -n 1 $fim_inputs | cut -d, -f1)
+export huc_level=${#hucNumber}
+
 source $args_file
 source $outputDestDir/params.env
 source $srcDir/bash_functions.env
 source $srcDir/bash_variables.env
+
+echo $input_WBD_gdb
+echo $huc_level
 
 echo
 echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"

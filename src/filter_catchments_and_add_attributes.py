@@ -25,8 +25,10 @@ def filter_catchments_and_add_attributes(
     wbd = gpd.read_file(wbd_filename)
     input_flows = gpd.read_file(input_flows_filename)
 
+    huc_level = len(huc_code)
+
     # filter segments within huc boundary
-    select_flows = tuple(map(str, map(int, wbd[wbd.HUC8.str.contains(huc_code)][FIM_ID])))
+    select_flows = tuple(map(str, map(int, wbd.query(f"HUC{huc_level} == '{huc_code}'")[FIM_ID])))
 
     if input_flows.HydroID.dtype != 'str':
         input_flows.HydroID = input_flows.HydroID.astype(str)

@@ -2,6 +2,9 @@
 
 # Do not call this file directly. Call fim_process_unit_wb.sh which calls this file.
 
+# huc level
+export huc_level=${#hucNumber}
+
 ## SOURCE FILE AND FUNCTIONS ##
 # load the various environment files
 args_file=$outputDestDir/runtime_args.env

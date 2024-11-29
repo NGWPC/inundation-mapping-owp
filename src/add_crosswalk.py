@@ -44,6 +44,8 @@ def add_crosswalk(
     min_catchment_area = float(min_catchment_area)  # 0.25#
     min_stream_length = float(min_stream_length)  # 0.5#
 
+    huc_column_name = input_huc.filter(like='HUC').columns[0]
+
     if extent == 'FR':
         ## crosswalk using majority catchment method
 
@@ -412,7 +414,7 @@ def add_crosswalk(
 
     if input_huc[FIM_ID].dtype != 'str':
         input_huc[FIM_ID] = input_huc[FIM_ID].astype(str)
-    output_hydro_table = output_hydro_table.merge(input_huc.loc[:, [FIM_ID, 'HUC8']], how='left', on=FIM_ID)
+    output_hydro_table = output_hydro_table.merge(input_huc.loc[:, [FIM_ID, huc_column_name]], how='left', on=FIM_ID)
 
     if output_flows.HydroID.dtype != 'str':
         output_flows.HydroID = output_flows.HydroID.astype(str)
@@ -420,7 +422,7 @@ def add_crosswalk(
         output_flows.loc[:, ['HydroID', 'LakeID']], how='left', on='HydroID'
     )
     output_hydro_table['LakeID'] = output_hydro_table['LakeID'].astype(int)
-    output_hydro_table = output_hydro_table.rename(columns={'HUC8': 'HUC'})
+    output_hydro_table = output_hydro_table.rename(columns={huc_column_name: 'HUC'})
     if output_hydro_table.HUC.dtype != 'str':
         output_hydro_table.HUC = output_hydro_table.HUC.astype(str)
 
@@ -478,7 +480,7 @@ if __name__ == '__main__':
     )
     parser.add_argument("-x", "--output-crosswalk-fileName", help="Crosswalk table", required=True)
     parser.add_argument("-t", "--output-hydro-table-fileName", help="Hydrotable", required=True)
-    parser.add_argument("-w", "--input-huc-fileName", help="HUC8 boundary", required=True)
+    parser.add_argument("-w", "--input-huc-fileName", help="HUC boundary", required=True)
     parser.add_argument("-b", "--input-nwmflows-fileName", help="Subest NWM burnlines", required=True)
     parser.add_argument("-y", "--input-nwmcatras-fileName", help="NWM catchment raster", required=False)
     parser.add_argument(
