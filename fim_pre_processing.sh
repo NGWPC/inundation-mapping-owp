@@ -21,26 +21,26 @@ usage()
         -c/--config     : Configuration file with bash environment variables to export
                             - Default: config/params_template.env
         -ud/--unitDenylist
-                        A file with a line delimited list of files in UNIT (HUC) directories to be
+                        : A file with a line delimited list of files in UNIT (HUC) directories to be
                             removed upon completion.
                         - Default: config/deny_unit.lst
                         - Note: if you want to keep all output files (aka.. no files removed),
                             use the word NONE as this value for this parameter.
         -bd/--branchDenylist
-                        A file with a line delimited list of files in BRANCHES directories to be
+                        : A file with a line delimited list of files in BRANCHES directories to be
                             removed upon completion of branch processing.
                         - Default: config/deny_branches.lst
                         - Note: if you want to keep all output files (aka.. no files removed),
                             use the word NONE as this value for this parameter.
         -zd/--branchZeroDenylist
-                        A file with a line delimited list of files in BRANCH ZERO directories to
+                        : A file with a line delimited list of files in BRANCH ZERO directories to
                             be removed upon completion of branch zero processing.
                         - Default: config/deny_branch_zero.lst
                         - Note: If you want to keep all output files (aka.. no files removed),
                         use the word NONE as this value for this parameter.
         -jh/--jobLimit    : Max number of concurrent HUC jobs to run. Default 1 job at time.
         -jb/--jobBranchLimit
-                        Max number of concurrent Branch jobs to run. Default 1 job at time.
+                        : Max number of concurrent Branch jobs to run. Default 1 job at time.
                         - Note: Make sure that the product of jh and jb plus 2 (jh x jb + 2)
                             does not exceed the total number of cores available.
         -o              : Overwrite outputs if they already exist.
@@ -115,7 +115,7 @@ in
 done
 
 # print usage if arguments empty and no restart
-if [ "$hucList" = "" ] && [ $restart -eq 0 ]; then
+if [ "$hucList" = "" ] && [ "$restart" = "" ]; then
     echo "ERROR: Missing -u Huclist argument"
     usage
     exit 22
@@ -129,6 +129,7 @@ fi
 # outputsDir & workDir come from the Dockerfile
 outputDestDir=$outputsDir/$runName
 tempRunDir=$workDir/$runName
+# export WBT_PATH=${tempRunDir}/whitebox_temp
 
 # default values
 if [ "$envFile" = "" ]; then envFile=/$projectDir/config/params_template.env; fi
@@ -232,6 +233,7 @@ if [ ! -d $outputDestDir ]; then
     mkdir -p $outputDestDir
     chmod 777 $outputDestDir
     mkdir -p $tempRunDir
+    chmod 777 $tempRunDir
 elif (( $restart > 0 )); then
     # If this is a restart, move unit errors to different folder to keep, and delete .env files
     mkdir -p $outputDestDir/unit_errors_before_restart_$restart
@@ -248,6 +250,7 @@ else
     rm -f $outputDestDir/*.env
 fi
 
+
 mkdir -p $outputDestDir/logs/unit
 mkdir -p $outputDestDir/logs/branch
 mkdir -p $outputDestDir/unit_errors
@@ -261,6 +264,9 @@ cp $envFile $outputDestDir/params.env
 # that any unit can load it independently (in seperate AWS objects, AWS fargates)
 # or via pipeline. There is likely a more elegent way to do this.
 args_file=$outputDestDir/runtime_args.env
+
+# reset it again (this time recursive for the new incoming folders
+chmod 777 -R $outputDestDir
 
 # the jobHucLimit is not from the args files, only jobBranchLimit
 echo "export runName=$runName" >> $args_file

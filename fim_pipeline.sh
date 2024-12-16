@@ -119,12 +119,13 @@ fi
 echo
 echo "---- Unit (HUC) processing is complete"
 date -u
-Calc_Duration $pipeline_start_time
+Calc_Duration "Duration : " $pipeline_start_time
+echo "---------------------------------------------------"
 
 ## POST PROCESSING
 
 # Remove run from the fim_temp directory
-rm -d $workDir/$runName
+rm -df $workDir/$runName
 
 # Pipe into post processing
 if [ "$skippost" = "0" ]; then
@@ -134,9 +135,9 @@ else
 fi
 
 echo
-echo "======================== End of fim_pipeline.sh =========================="
+echo "======================== End of fim_pipeline for $runName =========="
 date -u
-Calc_Duration $pipeline_start_time
+Calc_Duration "Total Duration is ... " $pipeline_start_time
 echo
 
 # Exit the script
