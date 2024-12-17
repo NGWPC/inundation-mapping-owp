@@ -19,6 +19,7 @@ def fill_depressions_wbt(workspace, branch_zero_id):
     
     # Set wbt envs
     wbt = whitebox.WhiteboxTools()
+    wbt.set_whitebox_dir(os.environ.get("WBT_PATH"))
     wbt.set_verbose_mode(True)
 
     if branch_zero_id:
