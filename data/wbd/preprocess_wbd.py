@@ -57,6 +57,10 @@ def clip_wbd_to_dem_domain(dem: str, wbd_in: str, wbd_out: str, huc_levels: List
 
 
 if __name__ == '__main__':
+
+    # WATCH FOR Alaska as well.  During the 3dep download of 20240916, it did not include
+    # Alaska. That one is in data/inputs/3dep_dems/10m_South_Alaska/20240912/
+
     parser = argparse.ArgumentParser(description='Clip WBD to DEM domain')
     parser.add_argument('-d', '--dem', help='Path to DEM', type=str, required=True)
     parser.add_argument('-w', '--wbd-in', help='Input WBD filename', type=str, required=True)
