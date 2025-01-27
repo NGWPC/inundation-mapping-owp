@@ -59,10 +59,11 @@ python3 $srcDir/adjust_thalweg_lateral.py \
 
 ## MASK BURNED DEM FOR STREAMS ONLY ###
 echo -e $startDiv"Mask Burned DEM for Thalweg Only $hucNumber $current_branch_id"
+# previously '--calc="A/B"' which would provide NDVs where B=0? Now should provide 0s where B=0???
 gdal_calc.py --quiet --type=Int32 --overwrite --co "COMPRESS=LZW" --co "BIGTIFF=YES" --co "TILED=YES" \
     -A $tempCurrentBranchDataDir/flowdir_d8_burned_filled_$current_branch_id.tif \
     -B $tempCurrentBranchDataDir/demDerived_streamPixels_$current_branch_id.tif \
-    --calc="A*B" \ # previously '--calc="A/B"' which would provide NDVs where B=0? Now should provide 0s where B=0???
+    --calc="A*B" \
     --outfile="$tempCurrentBranchDataDir/flowdir_d8_burned_filled_flows_$current_branch_id.tif" \
     --NoDataValue=0
 

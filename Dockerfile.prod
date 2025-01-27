@@ -80,8 +80,8 @@ RUN apt auto-remove
 
 ## adding AWS CLI (for bash) ##
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
-   unzip awscliv2.zip && \
-   ./aws/install
+    unzip awscliv2.zip && \
+    ./aws/install
 
 ## adding environment variables for numba and python ##
 ENV LC_ALL=C.UTF-8
