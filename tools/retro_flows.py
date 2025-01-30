@@ -19,21 +19,15 @@ def open_ds(url: str) -> xr.DataArray:
 def get_feature_ids_in_huc8(nwm_flows: gpd.GeoDataFrame, huc8_gdf: gpd.GeoDataFrame) -> List[int]:
     return sorted(nwm_flows[nwm_flows.intersects(huc8_gdf.unary_union)]['ID'].tolist())
 
-def get_peak_discharge_time(ds: xr.DataArray, feature_ids: List[int], start_time: datetime, end_time: datetime) -> datetime:
+def get_peak_discharges(ds: xr.DataArray, feature_ids: List[int], start_time: datetime, end_time: datetime) -> pd.DataFrame:
+    # Select data for specified features and time window
     ts = ds.sel(feature_id=feature_ids, time=slice(start_time, end_time))
-    peak_times = ts.idxmax(dim='time')
-    peak_times_series = peak_times.to_series()
-    mode_result = peak_times_series.mode()
     
-    if mode_result.empty:
-        modal_peak_time = peak_times_series.median()
-    else:
-        modal_peak_time = mode_result.iloc[0]
+    # Get maximum streamflow values for each feature_id
+    peak_flows = ts.max(dim='time')
     
-    return pd.Timestamp(modal_peak_time)
-
-def create_flowfile(ds: xr.DataArray, feature_ids: List[int], peak_time: datetime) -> pd.DataFrame:
-    df = ds.sel(feature_id=feature_ids, time=peak_time, method='nearest').to_dataframe().reset_index()
+    # Convert to dataframe and format
+    df = peak_flows.to_dataframe().reset_index()
     return df[['feature_id', 'streamflow']].rename(columns={'streamflow': 'discharge'})
 
 def find_fim_version_dir(hydrofabric_dir: str, fim_version: str) -> str:
@@ -64,11 +58,8 @@ def gen_retro_fim(hydrofabric_dir: str, fim_version: str, huc: str, date_range: 
     # Parse date range
     start_time, end_time = [datetime.strptime(d, "%Y-%m-%d") for d in date_range]
     
-    # Get peak discharge time
-    peak_time = get_peak_discharge_time(ds, feature_ids, start_time, end_time)
-    
     # Create flowfile
-    flowfile = create_flowfile(ds, feature_ids, peak_time)
+    flowfile = get_peak_discharges(ds, feature_ids, start_time, end_time)
     
     # Save flowfile
     flowfile_path = os.path.join(WORK_DIR, huc, f"{huc}_flowfile.csv")
