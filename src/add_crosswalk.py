@@ -351,12 +351,15 @@ def add_crosswalk(
     output_hydro_table['calb_coef_spatial'] = pd.NA
     output_hydro_table['calb_coef_final'] = pd.NA
 
-    if output_hydro_table.HydroID.dtype != 'str':
-        output_hydro_table.HydroID = output_hydro_table.HydroID.astype(str)
-    output_hydro_table[FIM_ID] = output_hydro_table.loc[:, 'HydroID'].apply(lambda x: str(x)[0:4])
-
     if input_huc[FIM_ID].dtype != 'str':
         input_huc[FIM_ID] = input_huc[FIM_ID].astype(str)
+    # get max length of input_huc[FIM_ID]
+    max_FIM_ID_len = len(input_huc[FIM_ID].max())
+
+    if output_hydro_table.HydroID.dtype != 'str':
+        output_hydro_table.HydroID = output_hydro_table.HydroID.astype(str)
+    output_hydro_table[FIM_ID] = output_hydro_table.loc[:, 'HydroID'].apply(lambda x: str(x)[:max_FIM_ID_len])
+
     output_hydro_table = output_hydro_table.merge(input_huc.loc[:, [FIM_ID, huc_column_name]], how='left', on=FIM_ID)
 
     if output_flows.HydroID.dtype != 'str':
