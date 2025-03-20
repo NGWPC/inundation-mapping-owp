@@ -285,7 +285,7 @@ if [ "$levelpaths_exist" = "1" ]; then
 fi
 
 # Ensure the file dem_burned_filled.tif exists before proceeding
-if [[ ! -f $tempHucDataDir/dem_burned_filled.tif ]]; then
+if [[ "$levelpaths_exist" = "1" && ! -f $tempHucDataDir/dem_burned_filled.tif ]]; then
    echo "The file: $tempHucDataDir/dem_burned_filled.tif does not exist"
    echo "Exiting ..."
    exit 2
