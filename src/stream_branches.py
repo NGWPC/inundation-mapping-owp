@@ -26,6 +26,12 @@ from utils.shared_variables import PREP_CRS
 
 gpd.options.io_engine = "pyogrio"
 
+class LevelPathIsExternal(Exception):
+    """Exception raised when the level path is external to the catchment."""
+
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
 
 class StreamNetwork(gpd.GeoDataFrame):
     """
@@ -1011,8 +1017,8 @@ class StreamNetwork(gpd.GeoDataFrame):
 
             Parameters
             ----------
-            self_ : GeoDataFrame
-                Dissolved tream network GeoDataFrame
+            self_extended : GeoDataFrame
+                Dissolved stream network GeoDataFrame
             self_copy : GeoDataFrame
                 Stream network GeoDataFrame
             outlet_id : int
@@ -1030,9 +1036,16 @@ class StreamNetwork(gpd.GeoDataFrame):
                 extended_id = outlet_id
 
             # add outlet segment to stream network
-            idx = self_extended[branch_id_attribute] == outlet.levpa_id
+            idx = self_extended[branch_id_attribute] == ds_outlet_tuple.levpa_id
             if self_extended.loc[idx].empty:
                 idx = self_extended['ID'] == extended_id
+            
+            try:
+                self_extended.loc[idx, 'geometry'].item()
+            except ValueError:
+                raise LevelPathIsExternal(
+                    f"LevelPathID {ds_outlet_tuple.levpa_id} is external to the stream network."
+                )
 
             extended_gs = gpd.GeoSeries(
                 [self_extended.loc[idx, 'geometry'].item(), ds_outlet_tuple.geometry]
@@ -1121,7 +1134,10 @@ class StreamNetwork(gpd.GeoDataFrame):
                 # Check if the levelpath outlet is external
                 if not len(temp_df.merge(self_in_wbd, left_on='to', right_on='ID')) == len(temp_df):
                     outlet_id = self_in_wbd.loc[self_in_wbd['to'] == outlet.ID, 'ID'].values[0]
-                    outlets_extended = add_outlet_segments(outlets_extended, self_copy, outlet_id, outlet)
+                    try:
+                        outlets_extended = add_outlet_segments(outlets_extended, self_copy, outlet_id, outlet)
+                    except LevelPathIsExternal:
+                        continue
 
             # merges each multi-line string to a singular linestring
             for lpid, row in tqdm(
