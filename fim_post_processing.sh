@@ -137,7 +137,7 @@ l_echo "$COUNTER" > "$COUNTER_FILE"
 # Check if the counter is greater than one
 if [ "$COUNTER" -gt 1 ]; then
     # Execute the Python file
-    l_echo "Updating hydroTable & scr_full_crosswalked for branches"
+    l_echo "Updating hydroTable & src_full_crosswalked for branches"
     python3 $srcDir/update_htable_src.py -d $outputDestDir
     Tcount
 else
@@ -158,9 +158,9 @@ find $outputDestDir/logs/branch -name "*_branch_*.log" -type f | \
     "$outputDestDir/branch_errors/non_zero_exit_codes.log" &
 
 ## RUN AGGREGATE BRANCH ELEV TABLES ##
-l_echo $startDiv"Processing usgs & ras2fim elev table aggregation"
+l_echo $startDiv"Processing usgs, ras2fim & ripple1d elev table aggregation"
 Tstart
-python3 $srcDir/aggregate_by_huc.py -fim $outputDestDir -i $fim_inputs -elev -ras -j $jobLimit
+python3 $srcDir/aggregate_by_huc.py -fim $outputDestDir -i $fim_inputs -elev -ras -ripple1d -j $jobLimit
 Tcount
 
 ## RUN BATHYMETRY ADJUSTMENT ROUTINE ##
@@ -223,6 +223,20 @@ if [ "$src_adjust_ras2fim" = "True" ] && [ "$src_subdiv_toggle" = "True" ] && [ 
         -run_dir $outputDestDir \
         -ras_input $ras2fim_input_dir \
         -ras_rc $ras_rating_curve_csv_filename \
+        -nwm_recur $nwm_recur_file \
+        -j $jobLimit
+    Tcount
+fi
+
+## RUN SYNTHETIC RATING CURVE CALIBRATION W/ RIPPLE1d CROSS SECTION RATING CURVES ##
+if [ "$src_adjust_ripple1d" = "True" ] && [ "$src_subdiv_toggle" = "True" ] && [ "$skipcal" = "0" ]; then
+    Tstart
+    l_echo $startDiv"Performing SRC adjustments using ripple1d rating curve database"
+    # Run SRC Optimization routine using ripple1d rating curve data (WSE and flow @ NWM recur flow values)
+    python3 $srcDir/src_adjust_ripple1d_rating.py \
+        -run_dir $outputDestDir \
+        -ripple1d_input $ripple1d_input_dir \
+        -ripple1d_rc $ripple1d_rating_curve_filename \
         -nwm_recur $nwm_recur_file \
         -j $jobLimit
     Tcount

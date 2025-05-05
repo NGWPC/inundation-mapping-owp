@@ -10,7 +10,7 @@ from utils.fim_enums import FIM_exit_codes
 from utils.shared_variables import FIM_ID
 
 
-gpd.options.io_engine = "pyogrio"
+gpd.options.io_engine = "fiona"
 
 
 def filter_catchments_and_add_attributes(

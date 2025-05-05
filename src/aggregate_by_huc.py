@@ -142,6 +142,21 @@ class HucDirectory(object):
         }
         self.agg_ras_elev_table = pd.DataFrame(columns=list(self.ras_dtypes.keys()))
 
+        self.ripple1d_dtypes = {
+            'location_id': str,
+            'nws_lid': str,
+            'feature_id': int,
+            'HydroID': int,
+            'levpa_id': str,
+            'dem_elevation': float,
+            'dem_adj_elevation': float,
+            'order_': str,
+            'LakeID': object,
+            'HUC8': str,
+            'snap_distance': float,
+        }
+        self.agg_ripple1d_elev_table = pd.DataFrame(columns=list(self.ripple1d_dtypes.keys()))
+
         self.bridge_dtypes = {
             'osmid': int,
             'name': str,
@@ -200,6 +215,14 @@ class HucDirectory(object):
         ras_elev_table = pd.read_csv(ras_elev_filename, dtype=self.ras_dtypes)
         self.agg_ras_elev_table = pd.concat([self.agg_ras_elev_table, ras_elev_table])
 
+    def ripple1d_elev_table(self, branch_path):
+        ripple1d_elev_filename = join(branch_path, 'ripple1d_elev_table.csv')
+        if not os.path.isfile(ripple1d_elev_filename):
+            return
+
+        ripple1d_elev_table = pd.read_csv(ripple1d_elev_filename, dtype=self.ripple1d_dtypes)
+        self.agg_ripple1d_elev_table = pd.concat([self.agg_ripple1d_elev_table, ripple1d_elev_table])
+
     def aggregate_bridge_pnts(self, branch_path, branch_id):
         bridge_filename = join(branch_path, f'osm_bridge_centroids_{branch_id}.gpkg')
         if not os.path.isfile(bridge_filename):
@@ -215,7 +238,7 @@ class HucDirectory(object):
         self.agg_bridge_pnts = pd.concat([self.agg_bridge_pnts, bridge_pnts])
 
     def agg_function(
-        self, usgs_elev_flag, hydro_table_flag, src_cross_flag, ras_elev_flag, bridge_flag, huc_id
+        self, usgs_elev_flag, hydro_table_flag, src_cross_flag, ras_elev_flag, ripple1d_elev_flag, bridge_flag, huc_id
     ):
         try:
             # try catch and its own log file output in error only.
@@ -224,6 +247,8 @@ class HucDirectory(object):
                     self.usgs_elev_table(branch_path)
                 if ras_elev_flag:
                     self.ras_elev_table(branch_path)
+                if ripple1d_elev_flag:
+                    self.ripple1d_elev_table(branch_path)
 
                 ## Other aggregate funtions can go here
                 if hydro_table_flag:
@@ -265,7 +290,15 @@ class HucDirectory(object):
 
                 if not self.agg_ras_elev_table.empty:
                     self.agg_ras_elev_table.to_csv(ras_elev_table_file, index=False)
+            
+            if ripple1d_elev_flag: 
+                ripple1d_elev_table_file = join(self.huc_dir_path, 'ripple1d_elev_table.csv')
+                if os.path.isfile(ripple1d_elev_table_file):
+                    os.remove(ripple1d_elev_table_file)
 
+                if not self.agg_ripple1d_elev_table.empty:
+                    self.agg_ripple1d_elev_table.to_csv(ripple1d_elev_table_file, index=False)
+            
             if bridge_flag:
                 bridge_pnts_file = join(self.huc_dir_path, 'osm_bridge_centroids.gpkg')
                 if os.path.isfile(bridge_pnts_file):
@@ -320,6 +353,7 @@ def log_error(
     hydro_table_flag,
     src_cross_flag,
     ras_elev_flag,
+    ripple1d_elev_flag,
     bridge_flag,
     huc_id,
     errMsg,
@@ -333,6 +367,8 @@ def log_error(
         file_name += "_src_cross"
     if ras_elev_flag:
         file_name += "_ras"
+    if ripple1d_elev_flag:
+        file_name += "ripple1d"
     if bridge_flag:
         file_name += "_bridge"
     file_name += "_error.log"
@@ -352,6 +388,7 @@ def aggregate_by_huc(
     hydro_table_flag,
     src_cross_flag,
     ras_elev_flag,
+    ripple1d_elev_flag,
     bridge_flag,
     num_job_workers,
 ):
@@ -386,6 +423,8 @@ def aggregate_by_huc(
             agg_type += "_src_cross"
         if ras_elev_flag:
             agg_type += "_ras"
+        if ripple1d_elev_flag:
+            agg_type += "ripple1d"
         if bridge_flag:
             agg_type += "_bridge"
         filelist = glob.glob(os.path.join(log_folder, f"*{agg_type}*"))
@@ -418,6 +457,7 @@ def aggregate_by_huc(
                         'hydro_table_flag': hydro_table_flag,
                         'src_cross_flag': src_cross_flag,
                         'ras_elev_flag': ras_elev_flag,
+                        'ripple1d_elev_flag': ripple1d_elev_flag,
                         'bridge_flag': bridge_flag,
                         'huc_id': huc_id,
                     }
@@ -442,6 +482,7 @@ def aggregate_by_huc(
                         'hydro_table_flag': hydro_table_flag,
                         'src_cross_flag': src_cross_flag,
                         'ras_elev_flag': ras_elev_flag,
+                        'ripple1d_elev_flag': ripple1d_elev_flag,
                         'bridge_flag': bridge_flag,
                         'huc_id': huc_id,
                     }
@@ -461,6 +502,7 @@ def aggregate_by_huc(
                 hydro_table_flag,
                 src_cross_flag,
                 ras_elev_flag,
+                ripple1d_elev_flag,
                 bridge_flag,
                 huc_id,
                 errMsg,
@@ -516,6 +558,14 @@ if __name__ == '__main__':
         '-ras',
         '--ras_elev_flag',
         help='Perform aggregate on branch ras2fim elev tables',
+        required=False,
+        default=False,
+        action='store_true',
+    )
+    parser.add_argument(
+        '-ripple1d',
+        '--ripple1d_elev_flag',
+        help='Perform aggregate on branch ripple1d elev tables',
         required=False,
         default=False,
         action='store_true',
