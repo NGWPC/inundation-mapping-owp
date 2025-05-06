@@ -8,7 +8,6 @@ import sys
 from collections import deque
 from multiprocessing import Pool
 from pathlib import Path
-import traceback
 
 import pandas as pd
 
@@ -309,7 +308,6 @@ def branch_proc_list(ripple1d_df, huc_run_dir, debug_outputs_option, log_file):
         log_file.write(
             '\n ERROR!!!: HUC ' + str(huc) + ' --> ' + '  branch id: ' + str(branch_id) + ' ' + str(e) + '\n'
         )
-        traceback.print_exc()
 
 
 def run_prep(run_dir, ripple_input_dir, ripple_rc_filepath, nwm_recurr_filepath, debug_outputs_option, job_number):

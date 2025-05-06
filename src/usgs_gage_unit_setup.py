@@ -64,6 +64,9 @@ class Gage2Branch(object):
             # Convert Multipoint geometry to Point geometry
             ripple_locs['geometry'] = ripple_locs.representative_point()
 
+        else:
+            ripple_locs = pd.DataFrame(columns=['feature_id', 'stream_stn', 'fid_xs', 'source', 'geometry'])
+
         # Read RAS2FIM point locations file
         # !!! Geopandas is not honoring the dtype arg with this read_file below (huc8 being read as int64).
         # Need the raw data to store the 'huc8' attribute as an object to avoid issues with integers truncating the leading zero from some hucs

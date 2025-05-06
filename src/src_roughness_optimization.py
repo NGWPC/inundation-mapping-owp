@@ -726,9 +726,10 @@ def group_manningn_calc(df_nmerge, down_dist_thresh):
                 lid_count = 1
             prev_lid = df_nmerge.loc[index,'ahps_lid']
             '''
-        if np.isnan(
-            df_nmerge.loc[index, 'hydroid_calb_coef']
-        ):  # check if the hydroid_calb_coef value is nan (indicates a non-calibrated hydroid)
+        # check if the hydroid_calb_coef value is nan (indicates a non-calibrated hydroid)
+        # if np.isnan(df_nmerge.loc[index, 'hydroid_calb_coef']):
+        ## Switch to use pd.na, since df_nmerge is a DataFrame, not numpy array
+        if pd.isna(df_nmerge.loc[index, 'hydroid_calb_coef']):
             df_nmerge.loc[index, 'accum_dist'] = (
                 row['LENGTHKM'] + dist_accum
             )  # calculate accumulated river distance
