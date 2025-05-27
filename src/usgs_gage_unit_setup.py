@@ -86,7 +86,7 @@ class Gage2Branch(object):
         else:
             ras_locs = pd.DataFrame(columns=['feature_id', 'stream_stn', 'fid_xs', 'source', 'geometry'])
 
-        # Concat USGS points with RAS2FIM points, and Ripple1d points
+        # Concat USGS points with RAS2FIM points, and Ripple1d points 
         gages_locs = pd.concat([usgs_gages, ras_locs, ripple_locs], axis=0, ignore_index=True)
         # gages_locs.to_crs(PREP_CRS, inplace=True)
 
