@@ -46,7 +46,7 @@ class Gage2Branch(object):
             ripple_locs['fid_xs'] = ripple_locs['reach_id'].astype(str) + '_' + ripple_locs['ras_xs_station'].astype(str)
 
             # Assign source column 
-            ripple_locs['source'] = "ripple1d_v0_10_3"
+            ripple_locs['source'] = "ripple1d_v_0_10_3"
 
             ripple_locs['location_id'] = ripple_locs['fid_xs']
 
@@ -63,9 +63,9 @@ class Gage2Branch(object):
 
             # Convert Multipoint geometry to Point geometry
             ripple_locs['geometry'] = ripple_locs.representative_point()
-
+        
         else:
-            ripple_locs = pd.DataFrame(columns=['feature_id', 'stream_stn', 'fid_xs', 'source', 'geometry'])
+            ripple_locs = pd.DataFrame(columns=['feature_id', 'ras_xs_station', 'fid_xs', 'source', 'geometry'])
 
         # Read RAS2FIM point locations file
         # !!! Geopandas is not honoring the dtype arg with this read_file below (huc8 being read as int64).
@@ -86,14 +86,8 @@ class Gage2Branch(object):
         else:
             ras_locs = pd.DataFrame(columns=['feature_id', 'stream_stn', 'fid_xs', 'source', 'geometry'])
 
-        # Concat USGS points with RAS2FIM points, and Ripple1d points (if DF is not empty)
-        if not ripple_locs.empty:
-            gages_locs = pd.concat([usgs_gages, ras_locs, ripple_locs], axis=0, ignore_index=True)
-        else:
-        # Concat USGS points and RAS2FIM points
-            gages_locs = pd.concat([usgs_gages, ras_locs], axis=0, ignore_index=True)
-
-
+        # Concat USGS points with RAS2FIM points, and Ripple1d points
+        gages_locs = pd.concat([usgs_gages, ras_locs, ripple_locs], axis=0, ignore_index=True)
         # gages_locs.to_crs(PREP_CRS, inplace=True)
 
         # Filter USGS gages and RAS locations to huc
