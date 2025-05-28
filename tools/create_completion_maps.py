@@ -432,6 +432,8 @@ def generate_geopackage(instance_type, unit_log_dir, output_file, storage_cost_m
     # Calculate maximum memory usage
     get_max_memory_in_gb(log_dict)
 
+    # exit()
+    
     # Calculate cost
     if instance_type != None:
         log_dict =  update_log_with_costs(log_dict, cost_per_hour)
