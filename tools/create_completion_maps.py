@@ -14,12 +14,20 @@ HUC_NUMBER=12
 HUC_LEVEL=f'HUC{HUC_NUMBER}'
 
 PW_INSTANCE_TYPE_DICT = {
-    "r6a.4xlarge": 0.91,
-    "r6a.8xlarge": 1.81,
+    "r6a.2xlarge": 0.47,
+    "r6a.4xlarge": 0.92,
+    "r6a.8xlarge": 1.83,
     "r6a.16xlarge": 3.63,
+    "r7a.8xlarge": 2.45,
+    "r7iz.8xlarge": 2.99,
+    "r7i.8xlarge": 2.13,
     "c6i.2xlarge": 0.35,
     "c6i.4xlarge": 0.69,
-    "c6i.8xlarge": 1.37
+    "c6i.8xlarge": 1.37,
+    "c6i.24xlarge": 4.09,
+    "c7i.12xlarge": 2.16,
+    "m7i.12xlarge": 2.43,
+    
 }
 
 
@@ -187,6 +195,8 @@ def crawl_directory_multi_threaded(directory, num_threads):
 
 def  update_log_with_costs(log_dict, cost_per_hour):
 
+    total_run_cost = 0
+    
     for key, entry in log_dict.items():
         # Initialize default costs
         entry['system_cost_usd'] = None
@@ -242,12 +252,14 @@ def  update_log_with_costs(log_dict, cost_per_hour):
                 elapsed_wc_time_minutes = total_seconds / 60
                 elapsed_wc_time_hours = total_seconds / 3600
                 elapsed_wc_cost = elapsed_wc_time_hours * cost_per_hour
-
                 entry['elapsed_wall_clock_cost_usd'] = round(elapsed_wc_cost, 2)  # rounding to two decimal places
+                total_run_cost += round(elapsed_wc_cost, 2)
+                # print(f"Cost for {key} is ${round(elapsed_wc_cost, 2)}")
                 entry['elapsed_wall_clock_mins'] = round(elapsed_wc_time_minutes, 2)
             except ValueError:
                 print(f"Error converting user time to float for entry {key}")
 
+    print(f"Total Run Cost: ${round(total_run_cost, 2)}")
     return log_dict
 
 
@@ -398,6 +410,7 @@ def get_max_memory_in_gb(log_dict):
         if int(log_dict[huc]['Maximum resident set size (kbytes)']) != 0:
             max_gigabytes = int(log_dict[huc]["Maximum resident set size (kbytes)"]) / 1048576
             max_gigabytes = round(max_gigabytes, 2)
+            # print(f"Max memory for {huc} is {max_gigabytes}")
             if max_gigabytes > largest_memory_used:
                 largest_memory_used = max_gigabytes
                 largest_memory_used_huc = huc
@@ -432,11 +445,11 @@ def generate_geopackage(instance_type, unit_log_dir, output_file, storage_cost_m
     # Calculate maximum memory usage
     get_max_memory_in_gb(log_dict)
 
-    # exit()
-    
     # Calculate cost
     if instance_type != None:
         log_dict =  update_log_with_costs(log_dict, cost_per_hour)
+
+    # exit()
 
     # Calculate storage costs
     if storage_cost_monthly != None:
