@@ -66,10 +66,14 @@ class Huc:
         self._wbd_source = wbd_source
 
         if self.huc_level not in self._valid_huc_levels:
-            raise ValueError(f'{self.huc_level} is not a valid HUC level. Choose from {self._valid_huc_levels}')
+            raise ValueError(
+                f'{self.huc_level} is not a valid HUC level for HUC, {self.huc}. Choose from {self._valid_huc_levels}'
+            )
         
         if self._wbd_source not in self._valid_wbd_sources:
-            raise ValueError(f'{wbd_source} is not a valid WBD source. Choose from {self._valid_wbd_sources}')
+            raise ValueError(
+                f'{wbd_source} is not a valid WBD source for HUC, {self.HUC}. Choose from {self._valid_wbd_sources}'
+            )
         
         if (not pygeohydro_installed) and (self._wbd_source == 'pygeohydro'):
             warnings.warn('pygeohydro is not installed. Using local WBD data instead.')
