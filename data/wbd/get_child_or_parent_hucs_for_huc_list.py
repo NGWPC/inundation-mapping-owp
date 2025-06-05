@@ -26,7 +26,13 @@ def main(
         huc_list = HucList.from_huc_list_file(input_huc_list_file)    
 
     # Get parent or child HUCs and create a new HucList object
-    output_huc_list = HucList(huc_list.get_any_hucs(huc_level, verbose=(not quiet), n_jobs=n_jobs))
+    output_huc_list__ = huc_list.get_any_hucs(huc_level, verbose=(not quiet), n_jobs=n_jobs)
+    
+    # drop NAs
+    output_huc_list__.dropna(inplace=True)
+
+    # Convert the output to a list of HUCs
+    output_huc_list = HucList(output_huc_list__)
 
     # Output the new HucList object to a file or print it as line-separated HUCs
     if output_huc_list_file:

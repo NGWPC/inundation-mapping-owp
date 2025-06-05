@@ -807,7 +807,7 @@ class StreamNetwork(gpd.GeoDataFrame):
         outlet_reach_ids = self.index[outlet_boolean_mask].tolist()
 
         branch_ids = [
-            str(h)[0:4] + str(b + 1).zfill(max_branch_id_digits) for b, h in enumerate(outlet_reach_ids)
+            str(h).zfill(4)[0:4] + str(b + 1).zfill(max_branch_id_digits) for b, h in enumerate(outlet_reach_ids)
         ]
 
         self.loc[outlet_reach_ids, branch_id_attribute] = branch_ids
