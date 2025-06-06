@@ -9,6 +9,7 @@ from posixpath import dirname
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Point
+from shapely import wkb
 
 from utils.shared_variables import PREP_CRS
 
@@ -19,12 +20,17 @@ warnings.simplefilter("ignore")
 
 
 class Gage2Branch(object):
-    def __init__(self, usgs_gage_filename, ras_locs_filename, ripple_locs_filename, ahps_filename, huc8, huc_CRS):
+    def __init__(self, usgs_gage_filename, ras_locs_filename, ripple_locs_filename, ahps_filename, huc, huc_CRS):
         self.usgs_gage_filename = usgs_gage_filename
         self.ras_locs_filename = ras_locs_filename
         self.ripple_locs_filename = ripple_locs_filename
         self.ahps_filename = ahps_filename
-        self.huc8 = str(huc8)
+        if len(huc) == 8:
+            self.huc8 = str(huc)
+            self.huc12 = None
+        else:
+            self.huc8 = str(huc[:8])
+            self.huc12 = str(huc)
         self.load_gages(huc_CRS)
 
     def load_gages(self, huc_CRS):
@@ -33,39 +39,67 @@ class Gage2Branch(object):
         usgs_gages['source'] = 'usgs_gage'
         usgs_gages.to_crs(huc_CRS, inplace=True)
 
-        # *CURRENTLY* : Read ripple1d point locations and RAS2FIM points (if available) and concat both to usgs_gages dataframe.
-        # Do we only use one or the other (ripple1d or RAS2FIM), or should we leave as is, using both if available?
+        # Read ripple1d point locations (if available) and concat to usgs_gages dataframe.
         if os.path.exists(self.ripple_locs_filename):
-            ripple_columns = ['reach_id', 'huc8', 'ras_xs_station', 'geometry']
-            ripple_locs = gpd.read_parquet(self.ripple_locs_filename, columns=ripple_columns)
             
+            # If we're at the HUC8 level, read huc8, column, if not, huc8 column doesn't exist. 
+            if self.huc12 == None:
+                print(f"HUC8 being used: {self.huc8}")
+                ripple_columns = ['reach_id', 'huc8', 'huc12', 'ras_xs_station', 'geom']
+            else:
+                print(f"HUC12 being used: {self.huc12}")
+                ripple_columns = ['reach_id', 'huc12', 'ras_xs_station', 'geom']
+            
+            # Read .parquet file using pandas
+            ripple_locs = pd.read_parquet(self.ripple_locs_filename, columns=ripple_columns)
+            
+            # Rename geom column to geometry
+            ripple_locs = ripple_locs.rename(columns={'geom': 'geometry'})
+
+            # Convert the geometry column from WKB
+            ripple_locs["geometry"] = ripple_locs["geometry"].apply(wkb.loads)
+
+            print(ripple_locs['geometry'].head)
+
+            # Convert pandas dataframe to geodataframe
+            ripple_locs_gdf = gpd.GeoDataFrame(ripple_locs, geometry="geometry")
+
+            print(f"Type of ripple_locs_gdf: {type(ripple_locs_gdf)}")
+
+            # Set geodataframe's crs to match usgs gage crs
+            ripple_locs_gdf.crs = huc_CRS
+
             # Cast ras_xs_station to float, then integer to remove decimal values
-            ripple_locs = ripple_locs.astype({'ras_xs_station': 'float'}).astype({'ras_xs_station': 'int'})
+            ripple_locs_gdf = ripple_locs_gdf.astype({'ras_xs_station': 'float'}).astype({'ras_xs_station': 'int'})
 
             # Assign fid_xs column 
-            ripple_locs['fid_xs'] = ripple_locs['reach_id'].astype(str) + '_' + ripple_locs['ras_xs_station'].astype(str)
+            ripple_locs_gdf['fid_xs'] = ripple_locs_gdf['reach_id'].astype(str) + '_' + ripple_locs_gdf['ras_xs_station'].astype(str)
 
             # Assign source column 
-            ripple_locs['source'] = "ripple1d_v_0_10_3"
+            ripple_locs_gdf['source'] = "ripple1d_v_0_10_3"
 
-            ripple_locs['location_id'] = ripple_locs['fid_xs']
+            ripple_locs_gdf['location_id'] = ripple_locs_gdf['fid_xs']
 
             # ripple1d reach_id is the same as feature_id, so rename it, and drop reach_id column
-            ripple_locs['feature_id'] = ripple_locs['reach_id']
-            ripple_locs = ripple_locs.drop(columns=['reach_id'])
+            ripple_locs_gdf['feature_id'] = ripple_locs_gdf['reach_id']
+            ripple_locs_gdf = ripple_locs_gdf.drop(columns=['reach_id'])
 
             # Drop ras_xs_station column
-            # ripple_locs = ripple_locs.drop(columns=['ras_xs_station'])
+            # ripple_locs_gdf = ripple_locs_gdf.drop(columns=['ras_xs_station'])
 
-            # Convert ripple locs crs to match usgs gage crs
-            ripple_locs.to_crs(huc_CRS, inplace=True)
-            ripple_locs = ripple_locs.rename(columns={'huc8': 'HUC8'})
+            # If huc12 used, assign the huc8 value to the HUC8 column
+            if self.huc12 != None:
+                ripple_locs_gdf['HUC8'] = self.huc12[:8]
+            
+            # Rename huc8 column to avoid conflicts
+            ripple_locs_gdf = ripple_locs_gdf.rename(columns={'huc8': 'HUC8'})
+            ripple_locs_gdf = ripple_locs_gdf.rename(columns={'huc12': 'HUC12'})
 
             # Convert Multipoint geometry to Point geometry
-            ripple_locs['geometry'] = ripple_locs.representative_point()
+            ripple_locs_gdf['geometry'] = ripple_locs_gdf.geometry.representative_point()
         
         else:
-            ripple_locs = pd.DataFrame(columns=['feature_id', 'ras_xs_station', 'fid_xs', 'source', 'geometry'])
+            ripple_locs_gdf = pd.DataFrame(columns=['feature_id', 'ras_xs_station', 'fid_xs', 'source', 'geometry'])
 
         # Read RAS2FIM point locations file
         # !!! Geopandas is not honoring the dtype arg with this read_file below (huc8 being read as int64).
@@ -78,7 +112,12 @@ class Gage2Branch(object):
 
             # Convert ras locs crs to match usgs gage crs
             ras_locs.to_crs(huc_CRS, inplace=True)
-            ras_locs = ras_locs.rename(columns={'huc8': 'HUC8'})
+            
+            #  Drop huc8 column if it already exists from ripple1d RC data, otherwise rename.
+            if 'HUC8' in ripple_locs_gdf.columns:
+                ras_locs = ras_locs.drop(columns=['huc8'])
+            else:
+                ras_locs = ras_locs.rename(columns={'huc8': 'HUC8'})
 
             # Convert Multipoint geometry to Point geometry
             ras_locs['geometry'] = ras_locs.representative_point()
@@ -87,7 +126,7 @@ class Gage2Branch(object):
             ras_locs = pd.DataFrame(columns=['feature_id', 'stream_stn', 'fid_xs', 'source', 'geometry'])
 
         # Concat USGS points with RAS2FIM points, and Ripple1d points 
-        gages_locs = pd.concat([usgs_gages, ras_locs, ripple_locs], axis=0, ignore_index=True)
+        gages_locs = pd.concat([usgs_gages, ras_locs, ripple_locs_gdf], axis=0, ignore_index=True)
         # gages_locs.to_crs(PREP_CRS, inplace=True)
 
         # Filter USGS gages and RAS locations to huc
@@ -190,7 +229,7 @@ if __name__ == '__main__':
     parser.add_argument('-nwm', '--input-nwm-filename', help='NWM stream subset', required=True)
     parser.add_argument('-o', '--output-filename', help='Table to append data', required=True)
     parser.add_argument(
-        '-huc', '--huc8-id', help='HUC8 ID (to verify gage location huc)', type=str, required=True
+        '-huc', '--huc-id', help='HUC ID (to verify gage location huc)', type=str, required=True
     )
     parser.add_argument('-bzero_id', '--branch-zero-id', help='Branch zero ID value', type=str, required=True)
     parser.add_argument(
@@ -215,17 +254,17 @@ if __name__ == '__main__':
     nws_lid_filename = args['nws_lid_filename']
     input_nwm_filename = args['input_nwm_filename']
     output_filename = args['output_filename']
-    huc8 = args['huc8_id']
+    huc = args['huc_id']
     bzero_id = args['branch_zero_id']
     filter_fim_inputs = args['filter_fim_inputs']
     huc_CRS = args['huc_CRS']
 
     if not filter_fim_inputs:
         usgs_gage_subset = Gage2Branch(
-            usgs_gages_filename, ras_locs_filename, ripple_locs_filename, nws_lid_filename, huc8, huc_CRS
+            usgs_gages_filename, ras_locs_filename, ripple_locs_filename, nws_lid_filename, huc, huc_CRS
         )
         if usgs_gage_subset.gages.empty:
-            print(f'There are no gages identified for {huc8}')
+            print(f'There are no gages identified for {huc}')
             os._exit(0)
         usgs_gage_subset.sort_into_branch(input_nwm_filename)
         usgs_gage_subset.write(output_filename)

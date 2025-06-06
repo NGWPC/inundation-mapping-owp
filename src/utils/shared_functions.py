@@ -182,14 +182,14 @@ def find_matching_subdirectories(parent_folder1, parent_folder2):
     subdirs1 = {
         d
         for d in os.listdir(parent_folder1)
-        if os.path.isdir(os.path.join(parent_folder1, d)) and len(d) == 8
+        if (os.path.isdir(os.path.join(parent_folder1, d)) and len(d) == 8) or (os.path.isdir(os.path.join(parent_folder1, d)) and len(d) == 12)
     }
 
     # List all subdirectories in the second parent folder
     subdirs2 = {
         d
         for d in os.listdir(parent_folder2)
-        if os.path.isdir(os.path.join(parent_folder2, d)) and len(d) == 8
+        if (os.path.isdir(os.path.join(parent_folder2, d)) and len(d) == 8) or (os.path.isdir(os.path.join(parent_folder2, d)) and len(d) == 12)
     }
 
     # Find common subdirectories with exactly 8 characters

@@ -48,7 +48,7 @@ Outputs
 
 def create_ripple1d_rating_database(huc_ripple1d_input_file, ripple1d_elev_df, nwm_recurr_filepath, log_dir):
     start_time = dt.datetime.now()
-    print('Reading ripple1d rating curves from csv...')
+    print('Reading ripple1d rating curves from parquet...')
     log_text = 'Processing database for ripple1d flow/WSE at NWM flow recur intervals...\n'
     # Note that we are using flow_cfs not flow_cms (error in raw data)
     col_filter = ["reach_id", "flow_cfs", "wse_m", "ras_xs_station"]
@@ -73,12 +73,12 @@ def create_ripple1d_rating_database(huc_ripple1d_input_file, ripple1d_elev_df, n
     # read in the aggregate Ripple1d elev table csv
     start_time = dt.datetime.now()
     cross_df = ripple1d_elev_df[
-        ["location_id", "HydroID", "feature_id", "levpa_id", "HUC8", "dem_adj_elevation", "source"]
+        ["location_id", "HydroID", "feature_id", "levpa_id", "HUC8", "HUC12", "dem_adj_elevation", "source"]
     ].copy()
     cross_df.rename(
         columns={'dem_adj_elevation': 'hand_datum', 'HydroID': 'hydroid', 'HUC8': 'huc'}, inplace=True
     )
-
+    
     # filter null location_id rows from cross_df
     cross_df = cross_df[cross_df.location_id.notnull()]
 
@@ -355,7 +355,7 @@ def run_prep(run_dir, ripple_input_dir, ripple_rc_filepath, nwm_recurr_filepath,
         # ripple1d_elev_df = concat_huc_csv(huc_run_dir, csv_elev)
         ripple1d_elev_df = pd.read_csv(
             os.path.join(huc_run_dir, csv_elev),
-            dtype={'HUC8': object, 'location_id': object, 'feature_id': int, 'levpa_id': object},
+            dtype={'HUC8': object, 'HUC12': object, 'location_id': object, 'feature_id': int, 'levpa_id': object},
         )
 
         ## Create an aggregate dataframe with all ripple1d rating curve csv files
@@ -407,7 +407,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '-ripple1d_rc',
         '--ripple1d-ratings',
-        help='CSV file name for ripple1d rating curve (reach avg)',
+        help='Parquet file name for ripple1d rating curve (reach avg)',
         required=True,
     )
     parser.add_argument(

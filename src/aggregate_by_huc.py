@@ -153,6 +153,7 @@ class HucDirectory(object):
             'order_': str,
             'LakeID': object,
             'HUC8': str,
+            'HUC12': str,
             'snap_distance': float,
         }
         self.agg_ripple1d_elev_table = pd.DataFrame(columns=list(self.ripple1d_dtypes.keys()))

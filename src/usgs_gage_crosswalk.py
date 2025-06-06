@@ -161,6 +161,7 @@ class GageCrosswalk(object):
                 "feature_id",
                 "levpa_id",
                 "HUC8",
+                "HUC12",
                 "dem_elevation",
                 "dem_adj_elevation",
                 "source",
