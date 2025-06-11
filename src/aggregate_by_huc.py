@@ -153,6 +153,7 @@ class HucDirectory(object):
             'order_': str,
             'LakeID': object,
             'HUC8': str,
+            'HUC10': str,
             'HUC12': str,
             'snap_distance': float,
         }
@@ -239,7 +240,14 @@ class HucDirectory(object):
         self.agg_bridge_pnts = pd.concat([self.agg_bridge_pnts, bridge_pnts])
 
     def agg_function(
-        self, usgs_elev_flag, hydro_table_flag, src_cross_flag, ras_elev_flag, ripple1d_elev_flag, bridge_flag, huc_id
+        self,
+        usgs_elev_flag,
+        hydro_table_flag,
+        src_cross_flag,
+        ras_elev_flag,
+        ripple1d_elev_flag,
+        bridge_flag,
+        huc_id,
     ):
         try:
             # try catch and its own log file output in error only.
@@ -291,15 +299,15 @@ class HucDirectory(object):
 
                 if not self.agg_ras_elev_table.empty:
                     self.agg_ras_elev_table.to_csv(ras_elev_table_file, index=False)
-            
-            if ripple1d_elev_flag: 
+
+            if ripple1d_elev_flag:
                 ripple1d_elev_table_file = join(self.huc_dir_path, 'ripple1d_elev_table.csv')
                 if os.path.isfile(ripple1d_elev_table_file):
                     os.remove(ripple1d_elev_table_file)
 
                 if not self.agg_ripple1d_elev_table.empty:
                     self.agg_ripple1d_elev_table.to_csv(ripple1d_elev_table_file, index=False)
-            
+
             if bridge_flag:
                 bridge_pnts_file = join(self.huc_dir_path, 'osm_bridge_centroids.gpkg')
                 if os.path.isfile(bridge_pnts_file):

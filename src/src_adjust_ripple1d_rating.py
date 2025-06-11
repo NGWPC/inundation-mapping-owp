@@ -58,7 +58,7 @@ def create_ripple1d_rating_database(huc_ripple1d_input_file, ripple1d_elev_df, n
     # Cast ras_xs_station to float, then integer to remove decimal values
     ras_rc_df = ras_rc_df.astype({'ras_xs_station': 'float'}).astype({'ras_xs_station': 'int'})
 
-    # Assign fid_xs column 
+    # Assign fid_xs column
     ras_rc_df['fid_xs'] = ras_rc_df['reach_id'].astype(str) + '_' + ras_rc_df['ras_xs_station'].astype(str)
 
     # rename fid_xs & WSE columns
@@ -72,13 +72,43 @@ def create_ripple1d_rating_database(huc_ripple1d_input_file, ripple1d_elev_df, n
 
     # read in the aggregate Ripple1d elev table csv
     start_time = dt.datetime.now()
-    cross_df = ripple1d_elev_df[
-        ["location_id", "HydroID", "feature_id", "levpa_id", "HUC8", "HUC12", "dem_adj_elevation", "source"]
-    ].copy()
-    cross_df.rename(
-        columns={'dem_adj_elevation': 'hand_datum', 'HydroID': 'hydroid', 'HUC8': 'huc'}, inplace=True
-    )
-    
+
+    # Here we need to incorporate logic from reading a variable HUC Level set in usgs_gage_unit_setup.py
+    # Since there are HUC8, HUC10, and HUC12 columns, we can check if the first row is not na.
+    # If the first row is not NA, we know that we have to be at a lower HUC scale.
+    # Conditional logic for setting cross_df['huc'] value for HUC8.
+    if (
+        not pd.isna(ripple1d_elev_df['HUC8'].iloc[0])
+        and pd.isna(ripple1d_elev_df['HUC10'].iloc[0])
+        and pd.isna(ripple1d_elev_df['HUC12'].iloc[0])
+    ):
+        print(f"HUC8 being used...")
+        cross_df = ripple1d_elev_df[
+            ["location_id", "HydroID", "feature_id", "levpa_id", "HUC8", "dem_adj_elevation", "source"]
+        ].copy()
+        cross_df.rename(
+            columns={'dem_adj_elevation': 'hand_datum', 'HydroID': 'hydroid', 'HUC8': 'huc'}, inplace=True
+        )
+
+    # Conditional logic for setting cross_df['huc'] value for HUC10
+    elif not pd.isna(ripple1d_elev_df['HUC10'].iloc[0]) and pd.isna(ripple1d_elev_df['HUC12'].iloc[0]):
+        print(f"HUC10 being used...")
+        cross_df = ripple1d_elev_df[
+            ["location_id", "HydroID", "feature_id", "levpa_id", "HUC10", "dem_adj_elevation", "source"]
+        ].copy()
+        cross_df.rename(
+            columns={'dem_adj_elevation': 'hand_datum', 'HydroID': 'hydroid', 'HUC10': 'huc'}, inplace=True
+        )
+
+    # Conditional logic for setting cross_df['huc'] value for HUC12
+    else:
+        print(f"HUC12 being used...")
+        cross_df = ripple1d_elev_df[
+            ["location_id", "HydroID", "feature_id", "levpa_id", "HUC12", "dem_adj_elevation", "source"]
+        ].copy()
+        cross_df.rename(
+            columns={'dem_adj_elevation': 'hand_datum', 'HydroID': 'hydroid', 'HUC12': 'huc'}, inplace=True
+        )
     # filter null location_id rows from cross_df
     cross_df = cross_df[cross_df.location_id.notnull()]
 
@@ -91,13 +121,7 @@ def create_ripple1d_rating_database(huc_ripple1d_input_file, ripple1d_elev_df, n
     ras_rc_df = ras_rc_df[
         ['location_id', 'reach_id', 'hydroid', 'levpa_id', 'huc', 'hand', 'discharge_cms', 'source']
     ]
-    # TODO remove above and replace with below
-    # ras_rc_df = ras_rc_df[
-    #     ['location_id', 'feature_id', 'hydroid', 'levpa_id', 'huc', 'hand', 'discharge_cms', 'source']
-    # ]
 
-    # ras_rc_df['feature_id'] = ras_rc_df['feature_id'].astype(int)
-    # TODO remove below
     ras_rc_df['feature_id'] = ras_rc_df['reach_id'].astype(int)
 
     # read in the NWM recurr csv file
@@ -221,7 +245,7 @@ def branch_proc_list(ripple1d_df, huc_run_dir, debug_outputs_option, log_file):
         for branch_id in branch_set:
             # Define paths to branch HAND data.
             # Define paths to HAND raster, catchments raster, and synthetic rating curve JSON.
-            # Assumes outputs are for HUC8 (not HUC6)
+            # Outputs can be HUC8, HUC10, or HUC12
             branch_dir = os.path.join(huc_run_dir, 'branches', branch_id)
             hand_path = os.path.join(branch_dir, 'rem_zeroed_masked_' + branch_id + '.tif')
             catchments_path = os.path.join(
@@ -232,7 +256,9 @@ def branch_proc_list(ripple1d_df, huc_run_dir, debug_outputs_option, log_file):
                 'gw_catchments_reaches_filtered_addedAttributes_crosswalked_' + branch_id + '.gpkg',
             )
             htable_path = os.path.join(branch_dir, 'hydroTable_' + branch_id + '.csv')
-            water_edge_median_ds = ripple1d_df[(ripple1d_df['huc'] == huc) & (ripple1d_df['levpa_id'] == branch_id)]
+            water_edge_median_ds = ripple1d_df[
+                (ripple1d_df['huc'] == huc) & (ripple1d_df['levpa_id'] == branch_id)
+            ]
 
             # Check to make sure the fim output files exist. Continue to next iteration if not and warn user.
             if not os.path.exists(hand_path):
@@ -310,7 +336,9 @@ def branch_proc_list(ripple1d_df, huc_run_dir, debug_outputs_option, log_file):
         )
 
 
-def run_prep(run_dir, ripple_input_dir, ripple_rc_filepath, nwm_recurr_filepath, debug_outputs_option, job_number):
+def run_prep(
+    run_dir, ripple_input_dir, ripple_rc_filepath, nwm_recurr_filepath, debug_outputs_option, job_number
+):
     ## Check input args are valid
     assert os.path.isdir(run_dir), 'ERROR: could not find the input fim_dir location: ' + str(run_dir)
 
@@ -349,14 +377,28 @@ def run_prep(run_dir, ripple_input_dir, ripple_rc_filepath, nwm_recurr_filepath,
     for huc in hucs_with_data:
         huc_run_dir = os.path.join(run_dir, huc)
         huc_ripple1d_input_file = os.path.join(huc_run_dir, ripple_rc_filepath)
+
         ## Create an aggregate dataframe with all ripple1d_elev_table.csv entries for hucs in fim_dir
-        print('Reading ripple1d point loc HAND elevation from ripple1d_elev_table csv files...')
-        csv_elev = 'ripple1d_elev_table.csv'  # file name to search ripple1d location data (in the huc/branch dirs)
-        # ripple1d_elev_df = concat_huc_csv(huc_run_dir, csv_elev)
-        ripple1d_elev_df = pd.read_csv(
-            os.path.join(huc_run_dir, csv_elev),
-            dtype={'HUC8': object, 'HUC12': object, 'location_id': object, 'feature_id': int, 'levpa_id': object},
+        print(f'\n Reading ripple1d point loc HAND elevation from {huc} ripple1d_elev_table.csv files...')
+        csv_elev = (
+            'ripple1d_elev_table.csv'  # file name to search ripple1d location data (in the huc/branch dirs)
         )
+        # ripple1d_elev_df = concat_huc_csv(huc_run_dir, csv_elev)
+        if os.path.isfile(os.path.join(huc_run_dir, csv_elev)):
+            ripple1d_elev_df = pd.read_csv(
+                os.path.join(huc_run_dir, csv_elev),
+                dtype={
+                    'HUC8': object,
+                    'HUC10': object,
+                    'HUC12': object,
+                    'location_id': object,
+                    'feature_id': int,
+                    'levpa_id': object,
+                },
+            )
+        else:
+            print(f" Processing errors for HUC : {huc}, it does not have the necessary {csv_elev} file. \n")
+            ripple1d_elev_df = None
 
         ## Create an aggregate dataframe with all ripple1d rating curve csv files
         # print('Reading ripple1d rating curves csv files from the input directory...')
@@ -370,7 +412,9 @@ def run_prep(run_dir, ripple_input_dir, ripple_rc_filepath, nwm_recurr_filepath,
             log_file.write(warn_err)
 
         elif ripple1d_elev_df.empty:
-            warn_err = 'WARNING: ripple1d_elev_df is empty - check that ' + csv_elev + ' files exist in fim_dir!'
+            warn_err = (
+                'WARNING: ripple1d_elev_df is empty - check that ' + csv_elev + ' files exist in fim_dir!'
+            )
             print(warn_err)
             log_file.write(warn_err)
 
@@ -402,12 +446,15 @@ if __name__ == '__main__':
     )
     parser.add_argument('-run_dir', '--run-dir', help='Parent directory of FIM run.', required=True)
     parser.add_argument(
-        '-ripple1d_input', '--ripple1d-dir', help='Path to ripple1d rating curve input directory', required=True
+        '-ripple1d_input',
+        '--ripple1d-dir',
+        help='Path to ripple1d rating curve input directory',
+        required=True,
     )
     parser.add_argument(
         '-ripple1d_rc',
         '--ripple1d-ratings',
-        help='Parquet file name for ripple1d rating curve (reach avg)',
+        help='Parquet file name for ripple1d rating curve',
         required=True,
     )
     parser.add_argument(
@@ -436,4 +483,6 @@ if __name__ == '__main__':
     job_number = int(args['job_number'])
 
     ## Prepare/check inputs, create log file, and spin up the proc list
-    run_prep(run_dir, ripple_input_dir, ripple_rc_filepath, nwm_recurr_filepath, debug_outputs_option, job_number)
+    run_prep(
+        run_dir, ripple_input_dir, ripple_rc_filepath, nwm_recurr_filepath, debug_outputs_option, job_number
+    )

@@ -182,17 +182,21 @@ def find_matching_subdirectories(parent_folder1, parent_folder2):
     subdirs1 = {
         d
         for d in os.listdir(parent_folder1)
-        if (os.path.isdir(os.path.join(parent_folder1, d)) and len(d) == 8) or (os.path.isdir(os.path.join(parent_folder1, d)) and len(d) == 12)
+        if (os.path.isdir(os.path.join(parent_folder1, d)) and len(d) == 8)
+        or (os.path.isdir(os.path.join(parent_folder1, d)) and len(d) == 12)
+        or (os.path.isdir(os.path.join(parent_folder1, d)) and len(d) == 10)
     }
 
     # List all subdirectories in the second parent folder
     subdirs2 = {
         d
         for d in os.listdir(parent_folder2)
-        if (os.path.isdir(os.path.join(parent_folder2, d)) and len(d) == 8) or (os.path.isdir(os.path.join(parent_folder2, d)) and len(d) == 12)
+        if (os.path.isdir(os.path.join(parent_folder2, d)) and len(d) == 8)
+        or (os.path.isdir(os.path.join(parent_folder2, d)) and len(d) == 12)
+        or (os.path.isdir(os.path.join(parent_folder1, d)) and len(d) == 10)
     }
 
-    # Find common subdirectories with exactly 8 characters
+    # Find common subdirectories with exactly 8, 10, or 12 characters - HLP
     matching_subdirs = list(subdirs1 & subdirs2)
 
     return matching_subdirs

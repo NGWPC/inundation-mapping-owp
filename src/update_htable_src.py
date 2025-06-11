@@ -6,7 +6,7 @@ import geopandas as gpd
 import pandas as pd
 
 
-def process_branch(sub_branch_path, branch):
+def process_branch(sub_branch_path, huc, branch):
     src_base_file = os.path.join(sub_branch_path, f'src_base_{branch}.csv')
     hydro_table_file = os.path.join(sub_branch_path, f'hydroTable_{branch}.csv')
     src_full_file = os.path.join(sub_branch_path, f'src_full_crosswalked_{branch}.csv')
@@ -14,7 +14,12 @@ def process_branch(sub_branch_path, branch):
         sub_branch_path, f'demDerived_reaches_split_filtered_addedAttributes_crosswalked_{branch}.gpkg'
     )
 
-    input_src_base = pd.read_csv(src_base_file, dtype=object)
+    if os.path.isfile(src_base_file):
+        input_src_base = pd.read_csv(src_base_file, dtype=object)
+    else:
+        print(f"Skipping HUC: {huc}, Branch: {branch} hydrotable update, {src_base_file} does not exist! \n")
+        return
+
     input_src_full = pd.read_csv(src_full_file, dtype=object)
     input_hydro_table = pd.read_csv(hydro_table_file, dtype=object)
     input_flows = gpd.read_file(input_flows_file, engine="pyogrio", use_arrow=True)
@@ -64,7 +69,7 @@ def reset_hydro_and_src(fim_dir):
                     for branch in os.listdir(branch_path):
                         sub_branch_path = os.path.join(branch_path, branch)
                         if os.path.isdir(sub_branch_path):
-                            process_branch(sub_branch_path, branch)
+                            process_branch(sub_branch_path, huc_folder, branch)
 
 
 # Example usage:

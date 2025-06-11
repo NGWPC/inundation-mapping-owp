@@ -20,16 +20,24 @@ warnings.simplefilter("ignore")
 
 
 class Gage2Branch(object):
-    def __init__(self, usgs_gage_filename, ras_locs_filename, ripple_locs_filename, ahps_filename, huc, huc_CRS):
+    def __init__(
+        self, usgs_gage_filename, ras_locs_filename, ripple_locs_filename, ahps_filename, huc, huc_CRS
+    ):
         self.usgs_gage_filename = usgs_gage_filename
         self.ras_locs_filename = ras_locs_filename
         self.ripple_locs_filename = ripple_locs_filename
         self.ahps_filename = ahps_filename
         if len(huc) == 8:
             self.huc8 = str(huc)
+            self.huc10 = None
+            self.huc12 = None
+        elif len(huc) == 10:
+            self.huc8 = str(huc[:8])
+            self.huc10 = str(huc)
             self.huc12 = None
         else:
             self.huc8 = str(huc[:8])
+            self.huc10 = str(huc[:10])
             self.huc12 = str(huc)
         self.load_gages(huc_CRS)
 
@@ -41,41 +49,46 @@ class Gage2Branch(object):
 
         # Read ripple1d point locations (if available) and concat to usgs_gages dataframe.
         if os.path.exists(self.ripple_locs_filename):
-            
-            # If we're at the HUC8 level, read huc8, column, if not, huc8 column doesn't exist. 
-            if self.huc12 == None:
+
+            # If we're at the HUC8 level (no huc10 or huc12 in class), read huc8 & huc12 columns
+            if self.huc12 == None and self.huc10 == None:
                 print(f"HUC8 being used: {self.huc8}")
-                ripple_columns = ['reach_id', 'huc8', 'huc12', 'ras_xs_station', 'geom']
+                ripple_columns = ['reach_id', 'huc8', 'ras_xs_station', 'geom']
+            # If we're at the HUC10 level, read huc10 & huc12 columns.
+            elif self.huc10 != None and self.huc12 == None:
+                print(f"HUC10 being used: {self.huc10}")
+                ripple_columns = ['reach_id', 'huc10', 'ras_xs_station', 'geom']
+            # Else we're at the HUC12 level, read huc12 column.
             else:
                 print(f"HUC12 being used: {self.huc12}")
                 ripple_columns = ['reach_id', 'huc12', 'ras_xs_station', 'geom']
-            
+
             # Read .parquet file using pandas
             ripple_locs = pd.read_parquet(self.ripple_locs_filename, columns=ripple_columns)
-            
+
             # Rename geom column to geometry
             ripple_locs = ripple_locs.rename(columns={'geom': 'geometry'})
 
             # Convert the geometry column from WKB
             ripple_locs["geometry"] = ripple_locs["geometry"].apply(wkb.loads)
 
-            print(ripple_locs['geometry'].head)
-
             # Convert pandas dataframe to geodataframe
             ripple_locs_gdf = gpd.GeoDataFrame(ripple_locs, geometry="geometry")
-
-            print(f"Type of ripple_locs_gdf: {type(ripple_locs_gdf)}")
 
             # Set geodataframe's crs to match usgs gage crs
             ripple_locs_gdf.crs = huc_CRS
 
             # Cast ras_xs_station to float, then integer to remove decimal values
-            ripple_locs_gdf = ripple_locs_gdf.astype({'ras_xs_station': 'float'}).astype({'ras_xs_station': 'int'})
+            ripple_locs_gdf = ripple_locs_gdf.astype({'ras_xs_station': 'float'}).astype(
+                {'ras_xs_station': 'int'}
+            )
 
-            # Assign fid_xs column 
-            ripple_locs_gdf['fid_xs'] = ripple_locs_gdf['reach_id'].astype(str) + '_' + ripple_locs_gdf['ras_xs_station'].astype(str)
+            # Assign fid_xs column
+            ripple_locs_gdf['fid_xs'] = (
+                ripple_locs_gdf['reach_id'].astype(str) + '_' + ripple_locs_gdf['ras_xs_station'].astype(str)
+            )
 
-            # Assign source column 
+            # Assign source column
             ripple_locs_gdf['source'] = "ripple1d_v_0_10_3"
 
             ripple_locs_gdf['location_id'] = ripple_locs_gdf['fid_xs']
@@ -84,22 +97,30 @@ class Gage2Branch(object):
             ripple_locs_gdf['feature_id'] = ripple_locs_gdf['reach_id']
             ripple_locs_gdf = ripple_locs_gdf.drop(columns=['reach_id'])
 
-            # Drop ras_xs_station column
-            # ripple_locs_gdf = ripple_locs_gdf.drop(columns=['ras_xs_station'])
-
-            # If huc12 used, assign the huc8 value to the HUC8 column
-            if self.huc12 != None:
+            # Fill first row of HUC10 & HUC10 with NA to identify HUC Level in src_adjust_ripple1d_rating.py
+            # If huc8 used, rename huc8 column to avoid conflicts
+            if self.huc10 == None and self.huc12 == None:
+                ripple_locs_gdf["HUC10"] = pd.NA
+                ripple_locs_gdf["HUC12"] = pd.NA
+                ripple_locs_gdf = ripple_locs_gdf.rename(columns={'huc8': 'HUC8'})
+            # If huc10 used, assign the huc8 value to the HUC8 column, rename huc10 column, fill first row of HUC12 with NA
+            elif self.huc10 != None and self.huc12 == None:
+                ripple_locs_gdf['HUC8'] = self.huc10[:8]
+                ripple_locs_gdf = ripple_locs_gdf.rename(columns={'huc10': 'HUC10'})
+                ripple_locs_gdf["HUC12"] = pd.NA
+            # If huc12 is used, assign the huc8 value to the HUC8 column, fill first row of HUC10 with NA, and rename huc12 column
+            else:
                 ripple_locs_gdf['HUC8'] = self.huc12[:8]
-            
-            # Rename huc8 column to avoid conflicts
-            ripple_locs_gdf = ripple_locs_gdf.rename(columns={'huc8': 'HUC8'})
-            ripple_locs_gdf = ripple_locs_gdf.rename(columns={'huc12': 'HUC12'})
+                ripple_locs_gdf["HUC10"] = pd.NA
+                ripple_locs_gdf = ripple_locs_gdf.rename(columns={'huc12': 'HUC12'})
 
             # Convert Multipoint geometry to Point geometry
             ripple_locs_gdf['geometry'] = ripple_locs_gdf.geometry.representative_point()
-        
+
         else:
-            ripple_locs_gdf = pd.DataFrame(columns=['feature_id', 'ras_xs_station', 'fid_xs', 'source', 'geometry'])
+            ripple_locs_gdf = pd.DataFrame(
+                columns=['feature_id', 'ras_xs_station', 'fid_xs', 'source', 'geometry']
+            )
 
         # Read RAS2FIM point locations file
         # !!! Geopandas is not honoring the dtype arg with this read_file below (huc8 being read as int64).
@@ -112,8 +133,8 @@ class Gage2Branch(object):
 
             # Convert ras locs crs to match usgs gage crs
             ras_locs.to_crs(huc_CRS, inplace=True)
-            
-            #  Drop huc8 column if it already exists from ripple1d RC data, otherwise rename.
+
+            #  Drop huc8 column if it already exists from ripple1d RC data to avoid conflicts, otherwise rename.
             if 'HUC8' in ripple_locs_gdf.columns:
                 ras_locs = ras_locs.drop(columns=['huc8'])
             else:
@@ -125,7 +146,7 @@ class Gage2Branch(object):
         else:
             ras_locs = pd.DataFrame(columns=['feature_id', 'stream_stn', 'fid_xs', 'source', 'geometry'])
 
-        # Concat USGS points with RAS2FIM points, and Ripple1d points 
+        # Concat USGS points with RAS2FIM points, and Ripple1d points
         gages_locs = pd.concat([usgs_gages, ras_locs, ripple_locs_gdf], axis=0, ignore_index=True)
         # gages_locs.to_crs(PREP_CRS, inplace=True)
 
@@ -224,7 +245,9 @@ if __name__ == '__main__':
     )
     parser.add_argument('-gages', '--usgs-gages-filename', help='USGS gages', required=True)
     parser.add_argument('-ras', '--ras-locs-filename', help='RAS2FIM rating curve locations', required=True)
-    parser.add_argument('-ripple', '--ripple-locs-filename', help='Ripple1d rating curve locations', required=True)
+    parser.add_argument(
+        '-ripple', '--ripple-locs-filename', help='Ripple1d rating curve locations', required=True
+    )
     parser.add_argument('-ahps', '--nws-lid-filename', help='AHPS gages', required=False)
     parser.add_argument('-nwm', '--input-nwm-filename', help='NWM stream subset', required=True)
     parser.add_argument('-o', '--output-filename', help='Table to append data', required=True)

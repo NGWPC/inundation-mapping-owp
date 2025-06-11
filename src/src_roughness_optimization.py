@@ -95,23 +95,13 @@ def update_rating_curve(
     - output_src_json:      src.json file with new SRC discharge values
 
     '''
-    print(
-        "Processing "
-        + str(source_tag)
-        + " calibration for huc --> "
-        + str(huc)
-        + '  branch id: '
-        + str(branch_id)
-    )
+
+    print(f"Processing {str(source_tag)} calibration for huc --> {str(huc)} branch id: {str(branch_id)}")
+
     log_text = (
-        "\nProcessing "
-        + str(source_tag)
-        + " calibration for huc --> "
-        + str(huc)
-        + '  branch id: '
-        + str(branch_id)
-        + '\n'
+        f"\nProcessing {str(source_tag)} calibration for huc --> {str(huc)} branch id: {str(branch_id)} \n"
     )
+
     log_text += "DOWNSTREAM_THRESHOLD: " + str(down_dist_thresh) + 'km\n'
     log_text += "Merge Previous Adj Values: " + str(merge_prev_adj) + '\n'
     df_nvalues = water_edge_median_df.copy()
@@ -135,7 +125,9 @@ def update_rating_curve(
     ## Read in the hydroTable.csv and check wether it has previously been updated
     # (rename default columns if needed)
     df_htable = pd.read_csv(
-        htable_path, dtype={'HUC': object, 'last_updated': object, 'submitter': object, 'obs_source': object}
+        htable_path,
+        dtype={'HUC': object, 'last_updated': object, 'submitter': object, 'obs_source': object},
+        low_memory=False,
     )
     df_prev_adj = pd.DataFrame()  # initialize empty df for populating/checking later
     if 'precalb_discharge_cms' not in df_htable.columns:  # need this column to exist before continuing
@@ -170,10 +162,12 @@ def update_rating_curve(
             }
         )
         df_prev_adj_htable = df_prev_adj_htable.groupby(["HydroID"]).first()
-        # Only keep previous USGS, ras2fim, or ripple1d rating curve adjustments 
+        # Only keep previous USGS, ras2fim, or ripple1d rating curve adjustments
         #   (previous spatial obs adjustments are not retained)
         df_prev_adj = df_prev_adj_htable[
-            df_prev_adj_htable['obs_source_prev'].str.contains("usgs_rating|ras2fim_rating|ripple1d_rating", na=False) 
+            df_prev_adj_htable['obs_source_prev'].str.contains(
+                "usgs_rating|ras2fim_rating|ripple1d_rating", na=False
+            )
         ]
         log_text += (
             'HUC: '
@@ -547,7 +541,7 @@ def update_rating_curve(
                 )  # drop these columns to avoid duplicates where merging with the full hydroTable df
                 df_htable = df_htable.merge(df_nmerge, how='left', on='HydroID')
                 df_htable['calb_applied'] = np.where(
-                    df_htable['calb_coef_final'].notnull(), 'True', 'False'
+                    df_htable['calb_coef_final'].notna(), 'True', 'False'
                 )  # create true/false column to clearly identify where new roughness values are applied
 
                 ## Calculate new discharge_cms with new adjusted ManningN

@@ -161,6 +161,7 @@ class GageCrosswalk(object):
                 "feature_id",
                 "levpa_id",
                 "HUC8",
+                "HUC10",
                 "HUC12",
                 "dem_elevation",
                 "dem_adj_elevation",
@@ -176,15 +177,12 @@ class GageCrosswalk(object):
                 'INFO: there were no ras2fim points located in this huc'
                 ' (note that most hucs do not have ras2fim data)'
             )
-        
+
         if not ripple1d_elev_table.empty:
             ripple1d_elev_table.to_csv(join(output_directory, 'ripple1d_elev_table.csv'), index=False)
         else:
-            print(
-                'INFO: there were no ripple1d points located in this huc'
-                ' (note that most hucs do not have ripple1d data)'
-            ) 
-        
+            print('INFO: there were no ripple1d points located in this huc')
+
         # filter for just usgs entries
         # look for source attributes that do not contain "ras2fim" or "ripple1d"
         usgs_elev_table = elev_table[~elev_table['source'].str.contains('ras2fim|ripple1d')]
