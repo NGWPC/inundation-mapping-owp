@@ -377,7 +377,7 @@ def log_error(
     if ras_elev_flag:
         file_name += "_ras"
     if ripple1d_elev_flag:
-        file_name += "ripple1d"
+        file_name += "_ripple1d"
     if bridge_flag:
         file_name += "_bridge"
     file_name += "_error.log"
@@ -433,7 +433,7 @@ def aggregate_by_huc(
         if ras_elev_flag:
             agg_type += "_ras"
         if ripple1d_elev_flag:
-            agg_type += "ripple1d"
+            agg_type += "_ripple1d"
         if bridge_flag:
             agg_type += "_bridge"
         filelist = glob.glob(os.path.join(log_folder, f"*{agg_type}*"))

@@ -74,8 +74,9 @@ def create_ripple1d_rating_database(huc_ripple1d_input_file, ripple1d_elev_df, n
     start_time = dt.datetime.now()
 
     # Here we need to incorporate logic from reading a variable HUC Level set in usgs_gage_unit_setup.py
-    # Since there are HUC8, HUC10, and HUC12 columns, we can check if the first row is not na.
-    # If the first row is not NA, we know that we have to be at a lower HUC scale.
+    # Since there are HUC8, HUC10, and HUC12 columns, but not all have data, check if the first row is not NA.
+    # If the first row is not NA, and higher HUCs have no value, we know that this is the current HUC scale.
+    
     # Conditional logic for setting cross_df['huc'] value for HUC8.
     if (
         not pd.isna(ripple1d_elev_df['HUC8'].iloc[0])
