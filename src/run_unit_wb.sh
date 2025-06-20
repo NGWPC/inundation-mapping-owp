@@ -346,6 +346,7 @@ if [ -f $tempHucDataDir/nwm_subset_streams_levelPaths.gpkg ]; then
         -nwm $tempHucDataDir/nwm_subset_streams_levelPaths.gpkg \
         -ras $tempHucDataDir/$ras_rating_curve_gpkg_filename \
         -ripple $tempHucDataDir/$ripple1d_rating_curve_filename \
+        -wbd $tempHucDataDir/wbd.gpkg \
         -o $tempHucDataDir/usgs_subset_gages.gpkg \
         -huc $hucNumber \
         -ahps $tempHucDataDir/nws_lid.gpkg \

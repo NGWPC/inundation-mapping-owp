@@ -21,24 +21,19 @@ warnings.simplefilter("ignore")
 
 class Gage2Branch(object):
     def __init__(
-        self, usgs_gage_filename, ras_locs_filename, ripple_locs_filename, ahps_filename, huc, huc_CRS
+        self, usgs_gage_filename, ras_locs_filename, ripple_locs_filename, ahps_filename, huc, huc_CRS, wbd_filename=None
     ):
         self.usgs_gage_filename = usgs_gage_filename
         self.ras_locs_filename = ras_locs_filename
         self.ripple_locs_filename = ripple_locs_filename
         self.ahps_filename = ahps_filename
-        if len(huc) == 8:
-            self.huc8 = str(huc)
-            self.huc10 = None
-            self.huc12 = None
-        elif len(huc) == 10:
-            self.huc8 = str(huc[:8])
-            self.huc10 = str(huc)
-            self.huc12 = None
-        else:
-            self.huc8 = str(huc[:8])
-            self.huc10 = str(huc[:10])
-            self.huc12 = str(huc)
+
+        self.huc8 = str(huc)
+        self.huc_level = len(self.huc8)
+        if wbd_filename:
+            self.wbd = gpd.read_file(wbd_filename)
+        self.huc_column = f'HUC{self.huc_level}'
+
         self.load_gages(huc_CRS)
 
     def load_gages(self, huc_CRS):
@@ -96,23 +91,9 @@ class Gage2Branch(object):
             # ripple1d reach_id is the same as feature_id, so rename it, and drop reach_id column
             ripple_locs_gdf['feature_id'] = ripple_locs_gdf['reach_id']
             ripple_locs_gdf = ripple_locs_gdf.drop(columns=['reach_id'])
-
-            # Fill first row of HUC10 & HUC10 with NA to identify HUC Level in src_adjust_ripple1d_rating.py
-            # If huc8 used, rename huc8 column to avoid conflicts
-            if self.huc10 == None and self.huc12 == None:
-                ripple_locs_gdf["HUC10"] = pd.NA
-                ripple_locs_gdf["HUC12"] = pd.NA
-                ripple_locs_gdf = ripple_locs_gdf.rename(columns={'huc8': 'HUC8'})
-            # If huc10 used, assign the huc8 value to the HUC8 column, rename huc10 column, fill first row of HUC12 with NA
-            elif self.huc10 != None and self.huc12 == None:
-                ripple_locs_gdf['HUC8'] = self.huc10[:8]
-                ripple_locs_gdf = ripple_locs_gdf.rename(columns={'huc10': 'HUC10'})
-                ripple_locs_gdf["HUC12"] = pd.NA
-            # If huc12 is used, assign the huc8 value to the HUC8 column, fill first row of HUC10 with NA, and rename huc12 column
-            else:
-                ripple_locs_gdf['HUC8'] = self.huc12[:8]
-                ripple_locs_gdf["HUC10"] = pd.NA
-                ripple_locs_gdf = ripple_locs_gdf.rename(columns={'huc12': 'HUC12'})
+            
+            # Rename huc8, huc10, or huc12 column to its uppercase version
+            ripple_locs_gdf = ripple_locs_gdf.rename(columns={self.huc_column.lower(): self.huc_column})
 
             # Convert Multipoint geometry to Point geometry
             ripple_locs_gdf['geometry'] = ripple_locs_gdf.geometry.representative_point()
@@ -151,12 +132,20 @@ class Gage2Branch(object):
         # gages_locs.to_crs(PREP_CRS, inplace=True)
 
         # Filter USGS gages and RAS locations to huc
-        self.gages = gages_locs[(gages_locs.HUC8 == self.huc8)]
+        if self.huc_level == 8:
+            self.gages = gages_locs[(gages_locs.HUC8 == self.huc8)]
+        else:
+            self.gages = gages_locs[gages_locs.geometry.intersects(self.wbd.geometry[0])]
 
         # Get AHPS sites within the HUC and add them to the USGS dataset
         if self.ahps_filename:
             ahps_sites = gpd.read_file(self.ahps_filename)
-            ahps_sites = ahps_sites[ahps_sites.HUC8 == self.huc8]  # filter to HUC8
+
+            if self.huc_level == 8:
+                ahps_sites = ahps_sites[ahps_sites.HUC8 == self.huc8]  # filter to HUC8
+            else:
+                ahps_sites = ahps_sites[ahps_sites.geometry.intersects(self.wbd.geometry[0])]
+
             ahps_sites = ahps_sites.rename(
                 columns={'nwm_feature_id': 'feature_id', 'usgs_site_code': 'location_id'}
             )
@@ -173,6 +162,9 @@ class Gage2Branch(object):
                     ],
                 ]
             )
+
+        # re-add the HUC column to AHPS sites
+        self.gages[self.huc_column] = self.huc8
 
         # Create gages attribute
         self.gages.location_id.fillna(self.gages.nws_lid, inplace=True)
@@ -250,6 +242,7 @@ if __name__ == '__main__':
     )
     parser.add_argument('-ahps', '--nws-lid-filename', help='AHPS gages', required=False)
     parser.add_argument('-nwm', '--input-nwm-filename', help='NWM stream subset', required=True)
+    parser.add_argument('-wbd', '--wbd-filename', help='WBD vector file', required=True)
     parser.add_argument('-o', '--output-filename', help='Table to append data', required=True)
     parser.add_argument(
         '-huc', '--huc-id', help='HUC ID (to verify gage location huc)', type=str, required=True
@@ -281,10 +274,11 @@ if __name__ == '__main__':
     bzero_id = args['branch_zero_id']
     filter_fim_inputs = args['filter_fim_inputs']
     huc_CRS = args['huc_CRS']
+    wbd_filename = args['wbd_filename']
 
     if not filter_fim_inputs:
         usgs_gage_subset = Gage2Branch(
-            usgs_gages_filename, ras_locs_filename, ripple_locs_filename, nws_lid_filename, huc, huc_CRS
+            usgs_gages_filename, ras_locs_filename, ripple_locs_filename, nws_lid_filename, huc, huc_CRS, wbd_filename=wbd_filename
         )
         if usgs_gage_subset.gages.empty:
             print(f'There are no gages identified for {huc}')
