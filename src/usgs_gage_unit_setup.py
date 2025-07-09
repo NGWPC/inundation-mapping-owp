@@ -46,16 +46,16 @@ class Gage2Branch(object):
         if os.path.exists(self.ripple_locs_filename):
 
             # If we're at the HUC8 level (no huc10 or huc12 in class), read huc8 & huc12 columns
-            if self.huc12 == None and self.huc10 == None:
+            if self.huc_level == 8:
                 print(f"HUC8 being used: {self.huc8}")
                 ripple_columns = ['reach_id', 'huc8', 'ras_xs_station', 'geom']
             # If we're at the HUC10 level, read huc10 & huc12 columns.
-            elif self.huc10 != None and self.huc12 == None:
-                print(f"HUC10 being used: {self.huc10}")
+            elif self.huc_level == 10:
+                print(f"HUC10 being used: {self.huc8}")
                 ripple_columns = ['reach_id', 'huc10', 'ras_xs_station', 'geom']
             # Else we're at the HUC12 level, read huc12 column.
             else:
-                print(f"HUC12 being used: {self.huc12}")
+                print(f"HUC12 being used: {self.huc8}")
                 ripple_columns = ['reach_id', 'huc12', 'ras_xs_station', 'geom']
 
             # Read .parquet file using pandas
