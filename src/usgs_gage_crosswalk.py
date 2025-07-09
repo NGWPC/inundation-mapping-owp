@@ -35,6 +35,8 @@ warnings.simplefilter("ignore")
         ID of the current branch i.e. '3246000257'
     huc_CRS: str
         Projection to be used for the HUC
+    huc_number: str
+        HUC number to be used for variable huc level processing.
 '''
 
 
@@ -51,6 +53,7 @@ class GageCrosswalk(object):
         dem_adj_filename,
         output_directory,
         huc_CRS,
+        huc_number,
     ):
         '''
         Run the gage crosswalk steps: 1) spatial join to branch catchments layer 2) snap sites to
@@ -160,9 +163,7 @@ class GageCrosswalk(object):
                 "HydroID",
                 "feature_id",
                 "levpa_id",
-                "HUC8",
-                "HUC10",
-                "HUC12",
+                f"HUC{len(huc_number)}",
                 "dem_elevation",
                 "dem_adj_elevation",
                 "source",
@@ -213,6 +214,7 @@ if __name__ == '__main__':
         '-b', '--branch-id', help='Branch ID used to filter the gages', type=str, required=True
     )
     parser.add_argument('-huc_CRS', help='Projection to be used for the HUC.', type=str, required=True)
+    parser.add_argument('-huc_number', help='HUC number', type=str, required=True)
 
     args = vars(parser.parse_args())
 
@@ -224,6 +226,7 @@ if __name__ == '__main__':
     output_directory = args['output_directory']
     branch_id = args['branch_id']
     huc_CRS = args['huc_CRS']
+    huc_number = args['huc_number']
 
     assert os.path.isfile(usgs_gages_filename), f"The input file {usgs_gages_filename} does not exist."
 
@@ -236,32 +239,5 @@ if __name__ == '__main__':
         dem_adj_filename,
         output_directory,
         huc_CRS,
+        huc_number,
     )
-
-"""
-Examples:
-
-python /foss_fim/src/usgs_gage_crosswalk.py -gages /outputs/carson_gms_bogus/02020005/usgs_subset_gages.gpkg
-    -flows /outputs/carson_gms_bogus/02020005/branches/3246000305/demDerived_reaches_split_filtered_3246000305.gpkg
-    -cat /outputs/carson_gms_bogus/02020005/branches/3246000305/gw_catchments_reaches_filtered_addedAttributes_3246000305.gpkg
-    -dem /outputs/carson_gms_bogus/02020005/branches/3246000305/dem_meters_3246000305.tif
-    -dem_adj /outputs/carson_gms_bogus/02020005/branches/3246000305/dem_thalwegCond_3246000305.tif
-    -outtable /outputs/carson_gms_bogus/02020005/branches/3246000305/usgs_elev_table.csv
-    -b 32460003 05
-
-python /foss_fim/src/usgs_gage_crosswalk.py -gages /outputs/carson_gms_bogus/02020005/usgs_subset_gages.gpkg
-    -flows /outputs/carson_gms_bogus/02020005/branches/3246000257/demDerived_reaches_split_filtered_3246000257.gpkg
-    -cat /outputs/carson_gms_bogus/02020005/branches/3246000257/gw_catchments_reaches_filtered_addedAttributes_3246000257.gpkg
-    -dem /outputs/carson_gms_bogus/02020005/branches/3246000257/dem_meters_3246000257.tif
-    -dem_adj /outputs/carson_gms_bogus/02020005/branches/3246000257/dem_thalwegCond_3246000257.tif
-    -outtable /outputs/carson_gms_bogus/02020005/branches/3246000257/usgs_elev_table.csv
-    -b 32460002 57
-
-python /foss_fim/src/usgs_gage_crosswalk.py -gages /outputs/carson_gage_test/04130001/usgs_subset_gages.gpkg
-    -flows /outputs/carson_gage_test/04130001/branches/9041000030/demDerived_reaches_split_filtered_9041000030.gpkg
-    -cat /outputs/carson_gage_test/04130001/branches/9041000030/gw_catchments_reaches_filtered_addedAttributes_9041000030.gpkg
-    -dem /outputs/carson_gage_test/04130001/branches/9041000030/dem_meters_9041000030.tif
-    -dem_adj /outputs/carson_gage_test/04130001/branches/904100030/dem_thalwegCond_0941000030.tif
-    -outtable /outputs/carson_gage_test/04130001/branches/9041000030/usgs_elev_table.csv
-    -b 90410000 30
-"""

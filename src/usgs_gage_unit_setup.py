@@ -44,19 +44,8 @@ class Gage2Branch(object):
 
         # Read ripple1d point locations (if available) and concat to usgs_gages dataframe.
         if os.path.exists(self.ripple_locs_filename):
-
-            # If we're at the HUC8 level (no huc10 or huc12 in class), read huc8 & huc12 columns
-            if self.huc12 == None and self.huc10 == None:
-                print(f"HUC8 being used: {self.huc8}")
-                ripple_columns = ['reach_id', 'huc8', 'ras_xs_station', 'geom']
-            # If we're at the HUC10 level, read huc10 & huc12 columns.
-            elif self.huc10 != None and self.huc12 == None:
-                print(f"HUC10 being used: {self.huc10}")
-                ripple_columns = ['reach_id', 'huc10', 'ras_xs_station', 'geom']
-            # Else we're at the HUC12 level, read huc12 column.
-            else:
-                print(f"HUC12 being used: {self.huc12}")
-                ripple_columns = ['reach_id', 'huc12', 'ras_xs_station', 'geom']
+            
+            ripple_columns = ['reach_id', f'huc{self.huc_level}', 'ras_xs_station', 'geom']
 
             # Read .parquet file using pandas
             ripple_locs = pd.read_parquet(self.ripple_locs_filename, columns=ripple_columns)
@@ -92,7 +81,7 @@ class Gage2Branch(object):
             ripple_locs_gdf['feature_id'] = ripple_locs_gdf['reach_id']
             ripple_locs_gdf = ripple_locs_gdf.drop(columns=['reach_id'])
             
-            # Rename huc8, huc10, or huc12 column to its uppercase version
+            # Rename huc_column to its uppercase as input to usgs_gage_crosswalk.py
             ripple_locs_gdf = ripple_locs_gdf.rename(columns={self.huc_column.lower(): self.huc_column})
 
             # Convert Multipoint geometry to Point geometry
@@ -100,7 +89,7 @@ class Gage2Branch(object):
 
         else:
             ripple_locs_gdf = pd.DataFrame(
-                columns=['feature_id', 'ras_xs_station', 'fid_xs', 'source', 'geometry', 'HUC10','HUC12']
+                columns=['feature_id', 'ras_xs_station', 'fid_xs', 'source', 'geometry', f'{self.huc_column}']
             )
 
         # Read RAS2FIM point locations file

@@ -122,7 +122,8 @@ if [ -f $tempHucDataDir/usgs_subset_gages.gpkg ]; then
         -dem_adj $tempCurrentBranchDataDir/dem_thalwegCond_$current_branch_id.tif \
         -out $tempCurrentBranchDataDir \
         -b $current_branch_id \
-        -huc_CRS $huc_CRS
+        -huc_CRS $huc_CRS \
+        -huc_number $hucNumber
 fi
 
 ## REMOVE FILES FROM DENY LIST ##

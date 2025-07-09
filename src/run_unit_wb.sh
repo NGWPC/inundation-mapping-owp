@@ -365,7 +365,8 @@ if [ -f $tempHucDataDir/usgs_subset_gages_$branch_zero_id.gpkg ]; then
         -dem $tempCurrentBranchDataDir/dem_meters_$branch_zero_id.tif \
         -dem_adj $tempCurrentBranchDataDir/dem_thalwegCond_$branch_zero_id.tif \
         -out $tempCurrentBranchDataDir -b $branch_zero_id \
-        -huc_CRS $huc_CRS
+        -huc_CRS $huc_CRS \
+        -huc_number $hucNumber
 fi
 
 ## CLEANUP BRANCH ZERO OUTPUTS ##
