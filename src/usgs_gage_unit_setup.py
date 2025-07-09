@@ -100,7 +100,7 @@ class Gage2Branch(object):
 
         else:
             ripple_locs_gdf = pd.DataFrame(
-                columns=['feature_id', 'ras_xs_station', 'fid_xs', 'source', 'geometry']
+                columns=['feature_id', 'ras_xs_station', 'fid_xs', 'source', 'geometry', 'HUC10','HUC12']
             )
 
         # Read RAS2FIM point locations file

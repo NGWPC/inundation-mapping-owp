@@ -79,9 +79,15 @@ rm -f $log_file_name
 args_file=$outputDestDir/runtime_args.env
 fim_inputs=$outputDestDir/fim_inputs.csv
 
-# get the first line of fim_inputs.csv and first CSV column
-hucNumber=$(head -n 1 $fim_inputs | cut -d, -f1)
-export huc_level=${#hucNumber}
+# get huc_level from the output's huc dirs
+export huc_level=$(
+  name=$(basename "$(
+    find "$outputDestDir" -maxdepth 1 -mindepth 1 -type d \
+      -regextype posix-extended -regex '.*/[0-9]+$' \
+    | sort -t/ -k2,2n \
+    | head -n1
+  )"); echo "${#name}"
+)
 
 source $args_file
 source $outputDestDir/params.env
