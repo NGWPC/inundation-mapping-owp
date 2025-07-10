@@ -37,6 +37,7 @@ Inputs
 - ripple1d inputs dir:      input directory with HUC level ripple1d rating curves
 - ripple1d RC filename:     ripple1d rating curve database filename 
 - nwm_recurr_filepath:      NWM flow recurrence interval dataset
+- huc_level:                HUC level used (HUC8, HUC10, or HUC12)
 - debug_outputs_option:     optional flag to output intermediate files for reviewing/debugging
 - job_number:               number of multi-processing jobs to use
 
@@ -46,7 +47,7 @@ Outputs
 '''
 
 
-def create_ripple1d_rating_database(huc_ripple1d_input_file, ripple1d_elev_df, nwm_recurr_filepath, log_dir):
+def create_ripple1d_rating_database(huc_ripple1d_input_file, ripple1d_elev_df, nwm_recurr_filepath, log_dir, huc_level):
     start_time = dt.datetime.now()
     print('Reading ripple1d rating curves from parquet...')
     log_text = 'Processing database for ripple1d flow/WSE at NWM flow recur intervals...\n'
@@ -73,43 +74,13 @@ def create_ripple1d_rating_database(huc_ripple1d_input_file, ripple1d_elev_df, n
     # read in the aggregate Ripple1d elev table csv
     start_time = dt.datetime.now()
 
-    # Here we need to incorporate logic from reading a variable HUC Level set in usgs_gage_unit_setup.py
-    # Since there are HUC8, HUC10, and HUC12 columns, but not all have data, check if the first row is not NA.
-    # If the first row is not NA, and higher HUCs have no value, we know that this is the current HUC scale.
-    
-    # Conditional logic for setting cross_df['huc'] value for HUC8.
-    if (
-        not pd.isna(ripple1d_elev_df['HUC8'].iloc[0])
-        and pd.isna(ripple1d_elev_df['HUC10'].iloc[0])
-        and pd.isna(ripple1d_elev_df['HUC12'].iloc[0])
-    ):
-        print(f"HUC8 being used...")
-        cross_df = ripple1d_elev_df[
-            ["location_id", "HydroID", "feature_id", "levpa_id", "HUC8", "dem_adj_elevation", "source"]
-        ].copy()
-        cross_df.rename(
-            columns={'dem_adj_elevation': 'hand_datum', 'HydroID': 'hydroid', 'HUC8': 'huc'}, inplace=True
-        )
+    cross_df = ripple1d_elev_df[
+            ["location_id", "HydroID", "feature_id", "levpa_id", f"HUC{huc_level}", "dem_adj_elevation", "source"]
+    ].copy()
+    cross_df.rename(
+        columns={'dem_adj_elevation': 'hand_datum', 'HydroID': 'hydroid', f'HUC{huc_level}': 'huc'}, inplace=True
+    )
 
-    # Conditional logic for setting cross_df['huc'] value for HUC10
-    elif not pd.isna(ripple1d_elev_df['HUC10'].iloc[0]) and pd.isna(ripple1d_elev_df['HUC12'].iloc[0]):
-        print(f"HUC10 being used...")
-        cross_df = ripple1d_elev_df[
-            ["location_id", "HydroID", "feature_id", "levpa_id", "HUC10", "dem_adj_elevation", "source"]
-        ].copy()
-        cross_df.rename(
-            columns={'dem_adj_elevation': 'hand_datum', 'HydroID': 'hydroid', 'HUC10': 'huc'}, inplace=True
-        )
-
-    # Conditional logic for setting cross_df['huc'] value for HUC12
-    else:
-        print(f"HUC12 being used...")
-        cross_df = ripple1d_elev_df[
-            ["location_id", "HydroID", "feature_id", "levpa_id", "HUC12", "dem_adj_elevation", "source"]
-        ].copy()
-        cross_df.rename(
-            columns={'dem_adj_elevation': 'hand_datum', 'HydroID': 'hydroid', 'HUC12': 'huc'}, inplace=True
-        )
     # filter null location_id rows from cross_df
     cross_df = cross_df[cross_df.location_id.notnull()]
 
@@ -338,7 +309,7 @@ def branch_proc_list(ripple1d_df, huc_run_dir, debug_outputs_option, log_file):
 
 
 def run_prep(
-    run_dir, ripple_input_dir, ripple_rc_filepath, nwm_recurr_filepath, debug_outputs_option, job_number
+    run_dir, ripple_input_dir, ripple_rc_filepath, nwm_recurr_filepath, huc_level, debug_outputs_option, job_number
 ):
     ## Check input args are valid
     assert os.path.isdir(run_dir), 'ERROR: could not find the input fim_dir location: ' + str(run_dir)
@@ -389,9 +360,7 @@ def run_prep(
             ripple1d_elev_df = pd.read_csv(
                 os.path.join(huc_run_dir, csv_elev),
                 dtype={
-                    'HUC8': object,
-                    'HUC10': object,
-                    'HUC12': object,
+                    f'HUC{huc_level}': object,
                     'location_id': object,
                     'feature_id': int,
                     'levpa_id': object,
@@ -423,7 +392,7 @@ def run_prep(
             print('This may take a few minutes...')
             log_file.write("Starting create ripple1d rating db")
             ripple1d_df = create_ripple1d_rating_database(
-                huc_ripple1d_input_file, ripple1d_elev_df, nwm_recurr_filepath, log_dir
+                huc_ripple1d_input_file, ripple1d_elev_df, nwm_recurr_filepath, log_dir, huc_level
             )
 
             ## Create huc proc_list for multiprocessing and execute the update_rating_curve function
@@ -464,6 +433,8 @@ if __name__ == '__main__':
         help='Path to NWM recur file (multiple NWM flow intervals). NOTE: assumes flow units are cfs!!',
         required=True,
     )
+    parser.add_argument('-huc_level', '--huc-level', help='HUC level being used', required=True)
+
     parser.add_argument(
         '-debug',
         '--extra-outputs',
@@ -474,16 +445,18 @@ if __name__ == '__main__':
     )
     parser.add_argument('-j', '--job-number', help='Number of jobs to use', required=False, default=1)
 
+
     ## Assign variables from arguments.
     args = vars(parser.parse_args())
     run_dir = args['run_dir']
     ripple_input_dir = args['ripple1d_dir']
     ripple_rc_filepath = args['ripple1d_ratings']
     nwm_recurr_filepath = args['nwm_recur']
+    huc_level = args['huc_level']
     debug_outputs_option = args['extra_outputs']
     job_number = int(args['job_number'])
 
     ## Prepare/check inputs, create log file, and spin up the proc list
     run_prep(
-        run_dir, ripple_input_dir, ripple_rc_filepath, nwm_recurr_filepath, debug_outputs_option, job_number
+        run_dir, ripple_input_dir, ripple_rc_filepath, nwm_recurr_filepath, huc_level, debug_outputs_option, job_number
     )

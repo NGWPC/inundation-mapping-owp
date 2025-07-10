@@ -244,7 +244,8 @@ if [ "$src_adjust_ripple1d" = "True" ] && [ "$src_subdiv_toggle" = "True" ] && [
         -ripple1d_input $ripple1d_input_dir \
         -ripple1d_rc $ripple1d_rating_curve_filename \
         -nwm_recur $nwm_recur_file \
-        -j $jobLimit
+        -huc_level $huc_level \
+        -j $jobLimit 
     Tcount
 fi
 
