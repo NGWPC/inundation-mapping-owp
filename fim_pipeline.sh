@@ -7,13 +7,13 @@ usage()
     Processing of HUC's in FIM4 comes in three sections. You can run 'fim_pipeline.sh' which will run
         the three main scripts: 'fim_pre_processing.sh', 'fim_process_unit_wb.sh' & 'fim_post_processing.sh'.
 
-    Usage : fim_pipeline.sh -u <huc8> -n <name_of_your_run>
+    Usage : fim_pipeline.sh -u <huc> -n <name_of_your_run>
 
     All arguments to this script are passed to 'fim_pre_processing.sh'.
     REQUIRED:
-        -u/--hucList    : HUC8s to run; more than one HUC8 should be passed in quotes (space delimited).
+        -u/--hucList    : HUCs to run; more than one HUC should be passed in quotes (space delimited).
                             A line delimited file, with a .lst extension, is also acceptable.
-                            HUC8s must be present in inputs directory.
+                            HUCs must be present in inputs directory. Only HUC 8s, 10s, and 12s are fully supported.
                             * Note: This does not need to be provided if '-r' is used.
         -n/--runName    : A name to tag the output directories and log files (only alphanumeric).
 
@@ -60,7 +60,7 @@ usage()
             - 'fim_pre_processing.sh' : This section must be run first as it creates the basic output folder
                 for the run. Key files and folders for the next two sections are also created.
 
-            - 'fim_process_unit_wb.sh' : This script processes one and exactly one HUC8 plus all of its
+            - 'fim_process_unit_wb.sh' : This script processes one and exactly one HUC plus all of its
                 related branches. While it can only process one, you can run this script multiple times,
                 each with different HUC (or overwriting a HUC). When you run 'fim_pipeline.sh',
                 when more than one HUC is provided, this script is iterated over, and parallelized.

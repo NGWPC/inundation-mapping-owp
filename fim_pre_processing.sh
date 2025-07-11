@@ -10,9 +10,9 @@ usage()
     Usage : fim_pre_processing.sh [REQ: -u <hucs> -n <run name> ] [OPT: see below for OPTIONS]
 
     REQUIRED:
-        -u/--hucList    : HUC8s to run; more than one HUC8 should be passed in quotes (space delimited).
+        -u/--hucList    : HUCs to run; more than one HUC should be passed in quotes (space delimited).
                             A line delimited file, with a .lst extension, is also acceptable.
-                            HUC8s must be present in inputs directory.
+                            HUCs must be present in inputs directory. Only HUC 8s, 10s, and 12s are fully supported.
                         * Note: This does not need to be provided if this is a restart.
         -n/--runName    : A name to tag the output directories and log files.
 
@@ -190,7 +190,7 @@ if [ -d $outputDestDir ] && [ $overwrite -eq 0 ] && [ $restart -eq 0 ]; then
 fi
 
 if (( $restart > 0 )); then
-    # Define the directory and the prefix & suffix - strip these to only add HUC8 value to hucList
+    # Define the directory and the prefix & suffix - strip these to only add HUC value to hucList
     directory=$outputDestDir/unit_errors
     prefix="/outputs/$runName/unit_errors/"
     suffix="_unit.log"

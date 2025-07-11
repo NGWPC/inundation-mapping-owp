@@ -169,9 +169,18 @@ def find_points_in_huc(huc_id):
     - water_edge_df: geodataframe with point data
     '''
 
-    water_edge_filepath = os.path.join(input_calib_points_dir, f'{huc_id}.parquet')
+    water_edge_filepath = os.path.join(input_calib_points_dir, f'{huc_id[:8]}.parquet')
 
+    # load wbd file from outputs directory
+    wbd_geom = gpd.read_file(
+        os.path.join(fim_directory, huc_id, 'wbd.gpkg')
+    ).geometry[0]
+
+    # read water edge points from parquet file using bounding box to limit the data read
     water_edge_df = gpd.read_parquet(water_edge_filepath)
+
+    # Query the water edge points to only keep those that intersect with the WBD geometry
+    water_edge_df = water_edge_df[water_edge_df.intersects(wbd_geom)].reset_index(drop=True)
 
     return water_edge_df
 
@@ -188,8 +197,18 @@ def find_hucs_with_points(points_file_dir, fim_out_huc_list):
     # Use list comprehension to slice .parquet off filename, and also prune non-parquet files in directory
     hucs_in_points_file_dir = [i[:-8] for i in files_in_points_file_dir if i.endswith('.parquet')]
 
-    # Use list comprehension to only keep hucs in both the points_file_dir & fim_out_huc_list
-    hucs_wpoints = [x for x in hucs_in_points_file_dir if x in fim_out_huc_list]
+    # make sets
+    hucs_in_points_file_dir_set = set(hucs_in_points_file_dir)
+    fim_out_huc_list_huc8s_set = set([f[:8] for f in fim_out_huc_list])
+    
+    # Use set operations to only keep hucs in both the points_file_dir & fim_out_huc_list
+    fim_out_huc_list_with_points = hucs_in_points_file_dir_set & fim_out_huc_list_huc8s_set
+
+    # Get the list of fim_out_huc_list that have points
+    hucs_wpoints = [
+        f for f in fim_out_huc_list
+        if f[:8] in fim_out_huc_list_with_points
+    ]
 
     return hucs_wpoints
 
@@ -228,6 +247,9 @@ def ingest_points_layer(fim_directory, job_number, debug_outputs_option, log_fil
     if 'branch_errors' in fim_out_huc_list:
         fim_out_huc_list.remove('branch_errors')
 
+    # get huc_level
+    huc_level = max(len(o) for o in fim_out_huc_list)
+
     ## Record run time and close log file
     run_time_start = dt.datetime.now()
     log_file.write('Finding all hucs that contain calibration points...' + '\n')
@@ -241,12 +263,12 @@ def ingest_points_layer(fim_directory, job_number, debug_outputs_option, log_fil
     log_file.write(f"{len(huc_list_db)} hucs found in point file directory" + '\n')
     log_file.write('#########################################################\n')
 
-    # Ensure HUC id has 8 characters
+    # Ensure HUC id has huc_level characters
     huc_list = []
     for huc in huc_list_db:
         ## zfill to the appropriate scale to ensure leading zeros are present, if necessary.
         if len(huc) == 7:
-            huc = huc.zfill(8)
+            huc = huc.zfill(huc_level)
         if huc not in huc_list:
             huc_list.append(huc)
             log_file.write(str(huc) + '\n')
