@@ -42,6 +42,26 @@ class Gage2Branch(object):
         usgs_gages['source'] = 'usgs_gage'
         usgs_gages.to_crs(huc_CRS, inplace=True)
 
+        # Read RAS2FIM point locations file
+        # !!! Geopandas is not honoring the dtype arg with this read_file below (huc8 being read as int64).
+        # Need the raw data to store the 'huc8' attribute as an object to avoid issues with integers truncating the leading zero from some hucs
+        if os.path.exists(self.ras_locs_filename):
+            ras_columns = ['feature_id', 'huc8', 'stream_stn', 'fid_xs', 'source', 'geometry']
+            ras_locs = gpd.read_file(self.ras_locs_filename, dtype={'huc8': 'object'}, usecols=ras_columns)
+            ras_locs = ras_locs[ras_columns]
+            ras_locs['location_id'] = ras_locs['fid_xs']
+
+            # Convert ras locs crs to match usgs gage crs
+            ras_locs.to_crs(huc_CRS, inplace=True)
+            
+            ras_locs = ras_locs.rename(columns={'huc8': 'HUC8'})
+
+            # Convert Multipoint geometry to Point geometry
+            ras_locs['geometry'] = ras_locs.representative_point()
+
+        else:
+            ras_locs = pd.DataFrame(columns=['feature_id', 'stream_stn', 'fid_xs', 'source', 'geometry'])
+
         # Read ripple1d point locations (if available) and concat to usgs_gages dataframe.
         if os.path.exists(self.ripple_locs_filename):
             
@@ -72,7 +92,8 @@ class Gage2Branch(object):
                 ripple_locs_gdf['reach_id'].astype(str) + '_' + ripple_locs_gdf['ras_xs_station'].astype(str)
             )
 
-            # Assign source column
+            # Assign source column (Modify ripple1d version to match new rating curve data - if updated)
+            # ripple1d_v_0_10_3 is the current version as of 7/17/2025
             ripple_locs_gdf['source'] = "ripple1d_v_0_10_3"
 
             ripple_locs_gdf['location_id'] = ripple_locs_gdf['fid_xs']
@@ -91,31 +112,7 @@ class Gage2Branch(object):
             ripple_locs_gdf = pd.DataFrame(
                 columns=['feature_id', 'ras_xs_station', 'fid_xs', 'source', 'geometry', f'{self.huc_column}']
             )
-
-        # Read RAS2FIM point locations file
-        # !!! Geopandas is not honoring the dtype arg with this read_file below (huc8 being read as int64).
-        # Need the raw data to store the 'huc8' attribute as an object to avoid issues with integers truncating the leading zero from some hucs
-        if os.path.exists(self.ras_locs_filename):
-            ras_columns = ['feature_id', 'huc8', 'stream_stn', 'fid_xs', 'source', 'geometry']
-            ras_locs = gpd.read_file(self.ras_locs_filename, dtype={'huc8': 'object'}, usecols=ras_columns)
-            ras_locs = ras_locs[ras_columns]
-            ras_locs['location_id'] = ras_locs['fid_xs']
-
-            # Convert ras locs crs to match usgs gage crs
-            ras_locs.to_crs(huc_CRS, inplace=True)
-
-            #  Drop huc8 column if it already exists from ripple1d RC data to avoid conflicts, otherwise rename.
-            if 'HUC8' in ripple_locs_gdf.columns:
-                ras_locs = ras_locs.drop(columns=['huc8'])
-            else:
-                ras_locs = ras_locs.rename(columns={'huc8': 'HUC8'})
-
-            # Convert Multipoint geometry to Point geometry
-            ras_locs['geometry'] = ras_locs.representative_point()
-
-        else:
-            ras_locs = pd.DataFrame(columns=['feature_id', 'stream_stn', 'fid_xs', 'source', 'geometry'])
-
+        
         # Concat USGS points with RAS2FIM points, and Ripple1d points
         gages_locs = pd.concat([usgs_gages, ras_locs, ripple_locs_gdf], axis=0, ignore_index=True)
         # gages_locs.to_crs(PREP_CRS, inplace=True)

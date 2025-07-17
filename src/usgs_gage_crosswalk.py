@@ -141,6 +141,7 @@ class GageCrosswalk(object):
 
         # filter for ras2fim entries (note that source column includes suffix with version number)
         ras_elev_table = elev_table[elev_table['source'].str.contains('ras2fim')]
+        
         ras_elev_table = ras_elev_table[
             [
                 "location_id",
@@ -154,6 +155,14 @@ class GageCrosswalk(object):
                 "stream_stn",
             ]
         ]
+
+        if not ras_elev_table.empty:
+            ras_elev_table.to_csv(join(output_directory, 'ras_elev_table.csv'), index=False)
+        else:
+            print(
+                'INFO: there were no ras2fim points located in this huc'
+                ' (note that most hucs do not have ras2fim data)'
+            )
 
         # filter for ripple1d entries (note that source column includes suffix with version number)
         ripple1d_elev_table = elev_table_copy[elev_table_copy['source'].str.contains('ripple1d')]
@@ -170,14 +179,6 @@ class GageCrosswalk(object):
                 "ras_xs_station",
             ]
         ]
-
-        if not ras_elev_table.empty:
-            ras_elev_table.to_csv(join(output_directory, 'ras_elev_table.csv'), index=False)
-        else:
-            print(
-                'INFO: there were no ras2fim points located in this huc'
-                ' (note that most hucs do not have ras2fim data)'
-            )
 
         if not ripple1d_elev_table.empty:
             ripple1d_elev_table.to_csv(join(output_directory, 'ripple1d_elev_table.csv'), index=False)

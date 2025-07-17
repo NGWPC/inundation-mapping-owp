@@ -65,8 +65,8 @@ cp $huc_input_DEM_domain $tempHucDataDir
 cp $inputsDir/ahps_sites/nws_lid.gpkg $tempHucDataDir
 cp $inputsDir/usgs_gages/usgs_gages.gpkg $tempHucDataDir
 
-# Check if the $hucNumber directory exists in the ras2fim $inputsDir
-if [ -d "$ras2fim_input_dir/$hucNumber" ]; then
+# Check if the $hucNumber directory exists in the ras2fim $inputsDir and src_adjust_ras2fim is set to True
+if [ -d "$ras2fim_input_dir/$hucNumber" ] && [ "$src_adjust_ras2fim" = "True" ]; then
     ras_rating_gpkg="$ras2fim_input_dir/$hucNumber/$ras_rating_curve_gpkg_filename"
     ras_rating_csv="$ras2fim_input_dir/$hucNumber/$ras_rating_curve_csv_filename"
     if [ -f "$ras_rating_gpkg" ]; then
@@ -83,8 +83,8 @@ if [ -d "$ras2fim_input_dir/$hucNumber" ]; then
     fi
 fi
 
-# Check if the $hucNumber directory exists in the ripple1d_input_dir
-if [ -d "$ripple1d_input_dir/$hucNumber" ]; then
+# Check if the $hucNumber directory exists in the ripple1d_input_dir and src_adjust_ripple1d is set to True
+if [ -d "$ripple1d_input_dir/$hucNumber" ] && [ "$src_adjust_ripple1d" = "True" ]; then
     ripple1d_rating_file="$ripple1d_input_dir/$hucNumber/$ripple1d_rating_curve_filename"
     if [ -f "$ripple1d_rating_file" ]; then
         cp "$ripple1d_rating_file" $tempHucDataDir
