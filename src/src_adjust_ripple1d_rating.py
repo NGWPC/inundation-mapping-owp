@@ -37,7 +37,7 @@ Inputs
 - ripple1d inputs dir:      input directory with HUC level ripple1d rating curves
 - ripple1d RC filename:     ripple1d rating curve database filename 
 - nwm_recurr_filepath:      NWM flow recurrence interval dataset
-- huc_level:                HUC level used (HUC8, HUC10, or HUC12)
+- huc_level:                HUC level used (8, 10, or 12)
 - debug_outputs_option:     optional flag to output intermediate files for reviewing/debugging
 - job_number:               number of multi-processing jobs to use
 
@@ -355,7 +355,7 @@ def run_prep(
         csv_elev = (
             'ripple1d_elev_table.csv'  # file name to search ripple1d location data (in the huc/branch dirs)
         )
-        # ripple1d_elev_df = concat_huc_csv(huc_run_dir, csv_elev)
+        # ripple1d_elev_df = concat_huc_csv(huc_run_dir, huc_level, csv_elev)
         if os.path.isfile(os.path.join(huc_run_dir, csv_elev)):
             ripple1d_elev_df = pd.read_csv(
                 os.path.join(huc_run_dir, csv_elev),
@@ -372,7 +372,7 @@ def run_prep(
 
         ## Create an aggregate dataframe with all ripple1d rating curve csv files
         # print('Reading ripple1d rating curves csv files from the input directory...')
-        # ras_rating_df = concat_huc_csv(ripple_input_dir, ripple_rc_filepath)
+        # ras_rating_df = concat_huc_csv(ripple_input_dir, huc_level, ripple_rc_filepath)
 
         if ripple1d_elev_df is None:
             warn_err = (

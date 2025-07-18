@@ -168,6 +168,7 @@ l_echo $startDiv"Processing usgs, ras2fim & ripple1d elev table aggregation"
 Tstart
 python3 $srcDir/aggregate_by_huc.py \
     -fim $outputDestDir \
+    -huc_level $huc_level \
     -i $fim_inputs \
     -elev \
     -ras \
@@ -225,6 +226,7 @@ if [ "$src_adjust_usgs" = "True" ] && [ "$src_subdiv_toggle" = "True" ] && [ "$s
         -run_dir $outputDestDir \
         -usgs_rc $usgs_rating_curve_csv \
         -nwm_recur $nwm_recur_file \
+        -huc_level $huc_level \
         -j $jobLimit
     Tcount
 fi
@@ -272,6 +274,7 @@ l_echo $startDiv"Aggregating branch hydrotables"
 Tstart
 python3 $srcDir/aggregate_by_huc.py \
     -fim $outputDestDir \
+    -huc_level $huc_level \
     -i $fim_inputs \
     -htable \
     -bridge \

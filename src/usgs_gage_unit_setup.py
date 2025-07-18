@@ -117,7 +117,7 @@ class Gage2Branch(object):
         gages_locs = pd.concat([usgs_gages, ras_locs, ripple_locs_gdf], axis=0, ignore_index=True)
         # gages_locs.to_crs(PREP_CRS, inplace=True)
 
-        # Filter USGS gages and RAS locations to huc
+        # Filter USGS gages, RAS & Ripple locations to huc
         if self.huc_level == 8:
             self.gages = gages_locs[(gages_locs.HUC8 == self.huc8)]
         else:
