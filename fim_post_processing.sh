@@ -211,6 +211,7 @@ if [ "$src_subdiv_toggle" = "True" ] && [ "$src_bankfull_toggle" = "True" ]; the
     python3 $srcDir/subdiv_chan_obank_src.py \
         -fim_dir $outputDestDir \
         -mann $vmann_input_file \
+        -huc_level $huc_level \
         -j $jobLimit
     Tcount
 fi
