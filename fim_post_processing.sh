@@ -198,6 +198,7 @@ if [ "$src_bankfull_toggle" = "True" ]; then
     python3 $srcDir/identify_src_bankfull.py \
         -fim_dir $outputDestDir \
         -flows $bankfull_flows_file \
+        -huc_level $huc_level \
         -j $jobLimit
     Tcount
 fi
