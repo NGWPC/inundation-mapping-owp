@@ -433,7 +433,12 @@ if __name__ == '__main__':
         help='Path to NWM recur file (multiple NWM flow intervals). NOTE: assumes flow units are cfs!!',
         required=True,
     )
-    parser.add_argument('-huc_level', '--huc-level', help='HUC level being used', required=True)
+    parser.add_argument(
+        '-huc_level',
+        '--huc-level',
+        help='HUC level to use',
+        required=True,
+    )
 
     parser.add_argument(
         '-debug',

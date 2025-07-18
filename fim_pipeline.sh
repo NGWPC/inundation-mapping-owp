@@ -96,6 +96,7 @@ source $srcDir/bash_functions.env
 jobMaxLimit=$(( $jobHucLimit * $jobBranchLimit ))
 
 logFile=$outputDestDir/logs/unit/pipeline_summary_unit.log
+postProcessingLogFile=$outputDestDir/logs/fim_post_processing.log
 process_wb_file=$projectDir/fim_process_unit_wb.sh
 
 pipeline_start_time=`date +%s`
@@ -129,7 +130,7 @@ rm -df $workDir/$runName
 
 # Pipe into post processing
 if [ "$skippost" = "0" ]; then
-    . $projectDir/fim_post_processing.sh -n $runName -j $jobMaxLimit
+    . $projectDir/fim_post_processing.sh -n $runName -j $jobMaxLimit 2>&1 | tee $postProcessingLogFile
 else
     echo "---- Skipping fim_post_processing"
 fi

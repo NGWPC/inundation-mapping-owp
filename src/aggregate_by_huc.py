@@ -347,6 +347,7 @@ class HucDirectory(object):
                 hydro_table_flag,
                 src_cross_flag,
                 ras_elev_flag,
+                ripple1d_elev_flag,
                 bridge_flag,
                 huc_id,
                 errMsg,

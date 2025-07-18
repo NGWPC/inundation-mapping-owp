@@ -166,7 +166,13 @@ find $outputDestDir/logs/branch -name "*_branch_*.log" -type f | \
 ## RUN AGGREGATE BRANCH ELEV TABLES ##
 l_echo $startDiv"Processing usgs, ras2fim & ripple1d elev table aggregation"
 Tstart
-python3 $srcDir/aggregate_by_huc.py -fim $outputDestDir -i $fim_inputs -elev -ras -ripple1d -j $jobLimit
+python3 $srcDir/aggregate_by_huc.py \
+    -fim $outputDestDir \
+    -i $fim_inputs \
+    -elev \
+    -ras \
+    -ripple1d \
+    -j $jobLimit
 Tcount
 
 ## RUN BATHYMETRY ADJUSTMENT ROUTINE ##
@@ -179,6 +185,7 @@ if [ "$bathymetry_adjust" = "True" ]; then
         -bathy $bathymetry_file \
         -buffer $wbd_buffer \
         -wbd $input_WBD_gdb \
+        -huc_level $huc_level \
         -j $jobLimit
     Tcount
 fi
