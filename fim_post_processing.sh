@@ -144,7 +144,7 @@ l_echo "$COUNTER" > "$COUNTER_FILE"
 if [ "$COUNTER" -gt 1 ]; then
     # Execute the Python file
     l_echo "Updating hydroTable & src_full_crosswalked for branches"
-    python3 $srcDir/update_htable_src.py -d $outputDestDir
+    python3 $srcDir/update_htable_src.py -d $outputDestDir -huc_level $huc_level
     Tcount
 else
     l_echo "Execution count is $COUNTER, not executing the update_htable_src.py file."

@@ -58,8 +58,9 @@ def process_branch(sub_branch_path, huc, branch):
     input_hydro_table.to_csv(hydro_table_file, index=False)
 
 
-def reset_hydro_and_src(fim_dir):
-    hucs = [h for h in os.listdir(fim_dir) if re.match(r'^\d{8}$', h)]
+def reset_hydro_and_src(fim_dir, huc_level):
+    regex_pattern = rf'^\d{{{huc_level}}}$'
+    hucs = [h for h in os.listdir(fim_dir) if re.match(regex_pattern, h)]
     for huc_folder in hucs:
         huc_path = os.path.join(fim_dir, huc_folder)
         if os.path.isdir(huc_path):
@@ -79,10 +80,20 @@ if __name__ == '__main__':
     Sample usage (min params):
         python3 src/update_htable_src.py
             -d /data/previous_fim/fim_4_5_2_0
+            -huc_level 8
     '''
     parser = argparse.ArgumentParser(description='Update hydrotable and src files.')
     parser.add_argument('-d', '--fim_dir', help='Directory path for fim_pipeline output.', required=True)
+    parser.add_argument(
+        '-huc_level',
+        '--huc-level',
+        help='HUC level to use',
+        required=True,
+        type=int,
+    )
+    
+    args = vars(parser.parse_args())
+    fim_dir = args['fim_dir']
+    huc_level = args['huc_level']
 
-    args = parser.parse_args()
-
-    reset_hydro_and_src(args.fim_dir)
+    reset_hydro_and_src(fim_dir, huc_level)

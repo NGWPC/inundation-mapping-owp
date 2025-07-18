@@ -196,13 +196,14 @@ class Gage2Branch(object):
             return int(lines.iloc[queried_index[0]].feature_id.item())
 
     @staticmethod
-    def filter_gage_branches(fim_inputs_filename):
+    def filter_gage_branches(fim_inputs_filename, huc_level):
         fim_dir = os.path.dirname(fim_inputs_filename)
         fim_inputs = pd.read_csv(
             fim_inputs_filename, header=None, names=['huc', 'levpa_id'], dtype={'huc': str, 'levpa_id': str}
         )
 
-        for huc_dir in [d for d in os.listdir(fim_dir) if re.search(r'^\d{8}$', d)]:
+        regex_pattern = rf'^\d{{{huc_level}}}$'
+        for huc_dir in [d for d in os.listdir(fim_dir) if re.search(regex_pattern, d)]:
             gage_file = os.path.join(fim_dir, huc_dir, 'usgs_subset_gages.gpkg')
             if not os.path.isfile(gage_file):
                 fim_inputs = fim_inputs.drop(fim_inputs.loc[fim_inputs.huc == huc_dir].index)
@@ -289,4 +290,4 @@ if __name__ == '__main__':
             -ff /outputs/test_output/fim_inputs.csv
         '''
         assert os.path.isfile(filter_fim_inputs)
-        Gage2Branch.filter_gage_branches(filter_fim_inputs)
+        Gage2Branch.filter_gage_branches(filter_fim_inputs, len(huc))
