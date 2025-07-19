@@ -297,7 +297,8 @@ l_echo $startDiv"Combining crosswalk tables"
 Tstart
 python3 $toolsDir/combine_crosswalk_tables.py \
     -d $outputDestDir \
-    -o $outputDestDir/crosswalk_table.csv
+    -o $outputDestDir/crosswalk_table.csv \
+    -huc_level $huc_level
 Tcount
 
 
