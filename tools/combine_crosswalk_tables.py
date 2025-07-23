@@ -7,7 +7,7 @@ import os
 import pandas as pd
 
 
-def combine_crosswalk_tables(data_directory, output_filename, huc_level):
+def combine_crosswalk_tables(data_directory, output_filename):
     """
     Combines all hydrotables from a run into a single crosswalk table with:
         HUC, BranchID, HydroID, feature_id, and LakeID
@@ -34,6 +34,8 @@ def combine_crosswalk_tables(data_directory, output_filename, huc_level):
     if len(dfs) > 1:
         df = pd.concat(dfs)
 
+        huc_level = len(df['HUC'].iloc[0])
+
         df = df.rename(
             columns={'HUC': f'huc{huc_level}', 'HydroID': 'hydro_id', 'LakeID': 'lake_id', 'BranchID': 'branch_id'}
         )
@@ -56,13 +58,6 @@ if __name__ == '__main__':
         '-d', '--data-directory', help='Data directory (name of run)', type=str, required=True
     )
     parser.add_argument('-o', '--output-filename', help='Filename for output', type=str, required=True)
-    parser.add_argument(
-        '-huc_level',
-        '--huc-level',
-        help='HUC level to use',
-        required=True,
-        type=int,
-    )
 
     args = vars(parser.parse_args())
 
