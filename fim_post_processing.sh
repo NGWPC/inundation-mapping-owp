@@ -144,7 +144,7 @@ l_echo "$COUNTER" > "$COUNTER_FILE"
 if [ "$COUNTER" -gt 1 ]; then
     # Execute the Python file
     l_echo "Updating hydroTable & src_full_crosswalked for branches"
-    python3 $srcDir/update_htable_src.py -d $outputDestDir
+    python3 $srcDir/update_htable_src.py -d $outputDestDir -huc_level $huc_level
     Tcount
 else
     l_echo "Execution count is $COUNTER, not executing the update_htable_src.py file."
@@ -166,7 +166,14 @@ find $outputDestDir/logs/branch -name "*_branch_*.log" -type f | \
 ## RUN AGGREGATE BRANCH ELEV TABLES ##
 l_echo $startDiv"Processing usgs, ras2fim & ripple1d elev table aggregation"
 Tstart
-python3 $srcDir/aggregate_by_huc.py -fim $outputDestDir -i $fim_inputs -elev -ras -ripple1d -j $jobLimit
+python3 $srcDir/aggregate_by_huc.py \
+    -fim $outputDestDir \
+    -huc_level $huc_level \
+    -i $fim_inputs \
+    -elev \
+    -ras \
+    -ripple1d \
+    -j $jobLimit
 Tcount
 
 ## RUN BATHYMETRY ADJUSTMENT ROUTINE ##
@@ -179,6 +186,7 @@ if [ "$bathymetry_adjust" = "True" ]; then
         -bathy $bathymetry_file \
         -buffer $wbd_buffer \
         -wbd $input_WBD_gdb \
+        -huc_level $huc_level \
         -j $jobLimit
     Tcount
 fi
@@ -191,6 +199,7 @@ if [ "$src_bankfull_toggle" = "True" ]; then
     python3 $srcDir/identify_src_bankfull.py \
         -fim_dir $outputDestDir \
         -flows $bankfull_flows_file \
+        -huc_level $huc_level \
         -j $jobLimit
     Tcount
 fi
@@ -203,6 +212,7 @@ if [ "$src_subdiv_toggle" = "True" ] && [ "$src_bankfull_toggle" = "True" ]; the
     python3 $srcDir/subdiv_chan_obank_src.py \
         -fim_dir $outputDestDir \
         -mann $vmann_input_file \
+        -huc_level $huc_level \
         -j $jobLimit
     Tcount
 fi
@@ -216,6 +226,7 @@ if [ "$src_adjust_usgs" = "True" ] && [ "$src_subdiv_toggle" = "True" ] && [ "$s
         -run_dir $outputDestDir \
         -usgs_rc $usgs_rating_curve_csv \
         -nwm_recur $nwm_recur_file \
+        -huc_level $huc_level \
         -j $jobLimit
     Tcount
 fi
@@ -263,6 +274,7 @@ l_echo $startDiv"Aggregating branch hydrotables"
 Tstart
 python3 $srcDir/aggregate_by_huc.py \
     -fim $outputDestDir \
+    -huc_level $huc_level \
     -i $fim_inputs \
     -htable \
     -bridge \
@@ -285,7 +297,7 @@ l_echo $startDiv"Combining crosswalk tables"
 Tstart
 python3 $toolsDir/combine_crosswalk_tables.py \
     -d $outputDestDir \
-    -o $outputDestDir/crosswalk_table.csv
+    -o $outputDestDir/crosswalk_table.csv 
 Tcount
 
 

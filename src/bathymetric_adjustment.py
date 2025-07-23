@@ -122,7 +122,7 @@ def correct_rating_for_bathymetry(fim_dir, huc, bathy_file, verbose):
     return log_text
 
 
-def multi_process_hucs(fim_dir, bathy_file, wbd_buffer, wbd, output_suffix, number_of_jobs, verbose):
+def multi_process_hucs(fim_dir, bathy_file, wbd_buffer, wbd, huc_level, output_suffix, number_of_jobs, verbose):
     """Function for correcting synthetic rating curves. It will correct each branch's
     SRCs in serial based on the feature_ids in the input bathy_file.
 
@@ -138,6 +138,8 @@ def multi_process_hucs(fim_dir, bathy_file, wbd_buffer, wbd, output_suffix, numb
         wbd : str
             Path to wbd input data, e.g.
             "/data/inputs/wbd/WBD_National_EPSG_5070_WBDHU8_clip_dem_domain.gpkg".
+        huc_level : int
+            HUC level to be used. Can be 8, 10, or 12.
         output_suffix : str
             Output filename suffix.
         number_of_jobs : int
@@ -171,12 +173,14 @@ def multi_process_hucs(fim_dir, bathy_file, wbd_buffer, wbd, output_suffix, numb
     # Find applicable HUCs to apply bathymetric adjustment
     # NOTE: This block can be removed if we have estimated bathymetry data for
     # the whole domain later.
-    fim_hucs = [h for h in os.listdir(fim_dir) if re.match(r'\d{8}', h)]
+    regex_pattern = rf'\d{{{huc_level}}}'
+    fim_hucs = [h for h in os.listdir(fim_dir) if re.match(regex_pattern, h)]
     bathy_gdf = gpd.read_file(bathy_file, engine="pyogrio", use_arrow=True)
     buffered_bathy = bathy_gdf.geometry.buffer(wbd_buffer)  # We buffer the bathymetric data to get adjacent
     wbd = gpd.read_file(
         wbd, mask=buffered_bathy, engine="fiona"
     )  # HUCs that could also have bathymetric reaches included
+
     #hucs_with_bathy = wbd.HUC8.to_list()
     hucs_with_bathy = wbd.filter(regex='HUC\d{1,2}', axis=1)
     if len(hucs_with_bathy.columns) > 1:
@@ -270,6 +274,13 @@ if __name__ == '__main__':
         type=str,
     )
     parser.add_argument(
+        '-huc_level',
+        '--huc-level',
+        help='HUC level to use',
+        required=True,
+        type=int,
+    )
+    parser.add_argument(
         '-suff',
         '--output-suffix',
         help="Suffix to append to the output log file (e.g. '_global_06_011')",
@@ -300,8 +311,9 @@ if __name__ == '__main__':
     bathy_file = args['bathy_file']
     wbd_buffer = int(args['wbd_buffer'])
     wbd = args['wbd']
+    huc_level = args['huc_level']
     output_suffix = args['output_suffix']
     number_of_jobs = args['number_of_jobs']
     verbose = bool(args['verbose'])
 
-    multi_process_hucs(fim_dir, bathy_file, wbd_buffer, wbd, output_suffix, number_of_jobs, verbose)
+    multi_process_hucs(fim_dir, bathy_file, wbd_buffer, wbd, huc_level, output_suffix, number_of_jobs, verbose)

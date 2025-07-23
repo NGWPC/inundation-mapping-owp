@@ -347,6 +347,7 @@ class HucDirectory(object):
                 hydro_table_flag,
                 src_cross_flag,
                 ras_elev_flag,
+                ripple1d_elev_flag,
                 bridge_flag,
                 huc_id,
                 errMsg,
@@ -392,6 +393,7 @@ def log_error(
 
 def aggregate_by_huc(
     fim_directory,
+    huc_level,
     fim_inputs,
     usgs_elev_flag,
     hydro_table_flag,
@@ -475,7 +477,8 @@ def aggregate_by_huc(
                     executor_dict[future] = huc_id
 
             else:
-                huc_list = [d for d in os.listdir(fim_directory) if re.match(r'\d{8}', d)]
+                regex_pattern = rf'^\d{{{huc_level}}}$'
+                huc_list = [d for d in os.listdir(fim_directory) if re.match(regex_pattern, d)]
 
                 # with multi proc, it won't be 100% in order as different hucs
                 # process faster, but it does help a little
@@ -538,6 +541,13 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Aggregates usgs_elev_table.csv at the HUC level')
     parser.add_argument('-fim', '--fim_directory', help='Input FIM Directory', required=True)
+    parser.add_argument(
+        '-huc_level',
+        '--huc-level',
+        help='HUC level to use',
+        required=True,
+        type=int,
+    )
     parser.add_argument('-i', '--fim_inputs', help='Input fim_inputs CSV file', required=False)
     parser.add_argument(
         '-elev',

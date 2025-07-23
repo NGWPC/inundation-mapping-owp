@@ -34,16 +34,18 @@ def combine_crosswalk_tables(data_directory, output_filename):
     if len(dfs) > 1:
         df = pd.concat(dfs)
 
+        huc_level = len(df['HUC'].iloc[0])
+
         df = df.rename(
-            columns={'HUC': 'huc8', 'HydroID': 'hydro_id', 'LakeID': 'lake_id', 'BranchID': 'branch_id'}
+            columns={'HUC': f'huc{huc_level}', 'HydroID': 'hydro_id', 'LakeID': 'lake_id', 'BranchID': 'branch_id'}
         )
 
-        df = df.sort_values(by=['feature_id', 'huc8', 'branch_id', 'hydro_id'])
+        df = df.sort_values(by=['feature_id', f'huc{huc_level}', 'branch_id', 'hydro_id'])
 
         df = df.reset_index(drop=True)
         df['hand_id'] = df.index + 1
 
-        df = df[['hand_id', 'feature_id', 'huc8', 'branch_id', 'hydro_id', 'lake_id']]
+        df = df[['hand_id', 'feature_id', f'huc{huc_level}', 'branch_id', 'hydro_id', 'lake_id']]
 
         df.to_csv(output_filename, index=False)
 
