@@ -8,9 +8,11 @@ import sys
 from multiprocessing import Pool
 
 import geopandas as gpd
+import pandas as pd
 import rasterio
 from dotenv import load_dotenv
 from rasterstats import point_query
+from pathlib import Path
 
 
 from src_roughness_optimization import update_rating_curve
@@ -30,7 +32,7 @@ load_dotenv('/foss_fim/src/bash_variables.env')
 outputsDir = os.getenv("outputsDir")
 input_calib_points_dir = os.getenv("input_calib_points_dir")
 print(input_calib_points_dir)
-input_calib_points_dir = r'/data/inputs/rating_curve/water_edge_database/calibration_points_usgs_hwm/'
+#input_calib_points_dir = r'/data/inputs/rating_curve/water_edge_database/calibration_points_usgs_hwm/'
 print(input_calib_points_dir)
 
 '''
@@ -160,7 +162,7 @@ def process_points(args):
     return log_text
 
 
-def find_points_in_huc(huc_id):
+def find_points_in_huc(huc_id, find_points_in_huc):
     '''
     This function loads the .parquet file containing points attributed with the input huc id into a GDataFrame
 
@@ -179,8 +181,19 @@ def find_points_in_huc(huc_id):
     print(water_edge_filepath)
     print(os.path.join(fim_directory, huc_id, 'wbd.gpkg'))
 
-    # Read water edge points
+    # Read original water edge points
     water_edge_df = gpd.read_parquet(water_edge_filepath)
+
+    # If USGS HWM data exist for the HUC, merge them with the original points 
+    if use_usgs_hwm == True:
+        # Check if parquet file exists in USGS HWM directory
+        usgs_hwm_parquet_dir = os.getenv("input_calib_points_usgs_hwm_dir")
+        potential_usgs_water_edge_filepath = Path(usgs_hwm_parquet_dir) / Path(water_edge_filepath).name
+        if os.path.exists(potential_usgs_water_edge_filepath):
+            usgs_hwm_water_edge_df = gpd.read_parquet(potential_usgs_water_edge_filepath)
+            usgs_hwm_water_edge_df = usgs_hwm_water_edge_df.to_crs(water_edge_df.crs)
+            water_edge_df = gpd.GeoDataFrame(pd.concat([water_edge_df, usgs_hwm_water_edge_df], ignore_index=True, sort=False))
+            water_edge_df.set_geometry('geometry', inplace=True)
 
     # Read WBD geometry as a full GeoDataFrame (retaining CRS)
     wbd_gdf = gpd.read_file(os.path.join(fim_directory, huc_id, 'wbd.gpkg'))
@@ -228,7 +241,7 @@ def find_hucs_with_points(points_file_dir, fim_out_huc_list):
     return hucs_wpoints
 
 
-def ingest_points_layer(fim_directory, job_number, debug_outputs_option, log_file):
+def ingest_points_layer(fim_directory, job_number, debug_outputs_option, log_file, use_usgs_hwm):
     '''
     The function obtains all points within a given huc, locates the corresponding FIM output files
     for each huc (confirms all necessary files exist), and then passes a proc list of
@@ -297,7 +310,7 @@ def ingest_points_layer(fim_directory, job_number, debug_outputs_option, log_fil
     ## Define paths to relevant HUC HAND data.
     for huc in huc_list:
         huc_branches_dir = os.path.join(fim_directory, huc, 'branches')
-        water_edge_df = find_points_in_huc(huc)
+        water_edge_df = find_points_in_huc(huc, use_usgs_hwm)
         print(f"{len(water_edge_df)} points found in " + str(huc))
         log_file.write(f"{len(water_edge_df)} points found in " + str(huc) + '\n')
 
@@ -411,7 +424,7 @@ def ingest_points_layer(fim_directory, job_number, debug_outputs_option, log_fil
     log_file.write('#########################################################\n')
 
 
-def run_prep(fim_directory, debug_outputs_option, ds_thresh_override, DOWNSTREAM_THRESHOLD, job_number):
+def run_prep(fim_directory, debug_outputs_option, ds_thresh_override, DOWNSTREAM_THRESHOLD, job_number, usgs_hwm):
     '''
     Main function to call the processing functions defined above, with validation, logging, and timing
 
@@ -472,7 +485,7 @@ def run_prep(fim_directory, debug_outputs_option, ds_thresh_override, DOWNSTREAM
     log_file.write('#########################################################\n\n')
     log_file.write('START TIME: ' + str(begin_time) + '\n')
 
-    ingest_points_layer(fim_directory, job_number, debug_outputs_option, log_file)
+    ingest_points_layer(fim_directory, job_number, debug_outputs_option, log_file, usgs_hwm)
 
     ## Record run time and close log file
     end_time = dt.datetime.now()
@@ -510,6 +523,13 @@ if __name__ == '__main__':
     parser.add_argument(
         '-j', '--job-number', help='OPTIONAL: Number of jobs to use', type=int, required=False, default=2
     )
+    parser.add_argument(
+        '--use-usgs-hwm',
+        help='OPTIONAL: Use if USGS High Water Mark data are desired to supplement spatial obs.',
+        default=False,
+        required=False,
+        action="store_true"
+    )
 
     ## Assign variables from arguments.
     args = vars(parser.parse_args())
@@ -517,5 +537,6 @@ if __name__ == '__main__':
     debug_outputs_option = args['extra_outputs']
     ds_thresh_override = args['downstream_thresh']
     job_number = args['job_number']
+    use_usgs_hwm = args['use_usgs_hwm']
 
-    run_prep(fim_directory, debug_outputs_option, ds_thresh_override, DOWNSTREAM_THRESHOLD, job_number)
+    run_prep(fim_directory, debug_outputs_option, ds_thresh_override, DOWNSTREAM_THRESHOLD, job_number, use_usgs_hwm)
