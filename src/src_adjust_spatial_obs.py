@@ -96,6 +96,7 @@ def process_points(args):
     # Query HAND values
     hand_vals = point_query(water_edge_df.geometry, hand_path, interpolate='nearest')
 
+    # If use_usgs_hwm is True, attempt to sum the height above ground from HWM obs with HAND value
     if use_usgs_hwm:
         # Ensure height_above_gnd is numeric (coerce bad strings to NaN)
         water_edge_df['height_above_gnd'] = pd.to_numeric(water_edge_df['height_above_gnd'], errors='coerce')
@@ -115,9 +116,6 @@ def process_points(args):
         # Just assign unadjusted hand values
         water_edge_df['hand'] = hand_vals
 
-    print(hand_path)
-    print(len(water_edge_df))
-
     # Group hydroids by unique submitter values (as sets)
     submitter_sets = water_edge_df.groupby('hydroid')['submitter'].apply(lambda x: set(x))
 
@@ -128,8 +126,6 @@ def process_points(args):
 
     # Drop all rows with those hydroids
     water_edge_df = water_edge_df[~water_edge_df['hydroid'].isin(hydroids_to_drop)]
-
-    print(len(water_edge_df))
 
     ## Check that there are valid obs in the water_edge_df (not empty)
     if water_edge_df.empty:
@@ -214,6 +210,8 @@ def find_points_in_huc(huc_id, use_usgs_hwm, log_file):
     # Read original water edge points
     water_edge_df = gpd.read_parquet(water_edge_filepath)
 
+    # If use_usgs_hwm is True, then check if corresponding parquet file exists for HUC.
+    # If it does, merge it with the water_edge_df. Filtering performed later.
     if use_usgs_hwm:
         usgs_hwm_parquet_dir = os.getenv("input_calib_points_usgs_hwm_dir")
         if usgs_hwm_parquet_dir:
