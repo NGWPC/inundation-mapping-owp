@@ -10,6 +10,8 @@ from multiprocessing import Pool
 import geopandas as gpd
 import rasterio
 from dotenv import load_dotenv
+from rasterstats import point_query
+
 
 from src_roughness_optimization import update_rating_curve
 from utils.shared_variables import (
@@ -27,6 +29,9 @@ gpd.options.io_engine = "pyogrio"
 load_dotenv('/foss_fim/src/bash_variables.env')
 outputsDir = os.getenv("outputsDir")
 input_calib_points_dir = os.getenv("input_calib_points_dir")
+print(input_calib_points_dir)
+input_calib_points_dir = r'/data/inputs/rating_curve/water_edge_database/calibration_points_usgs_hwm/'
+print(input_calib_points_dir)
 
 '''
 The script imports .parquet files per HUC8 containing observed FIM extent points and associated flow data.
@@ -79,15 +84,16 @@ def process_points(args):
     htable_path = args[7]
     optional_outputs = args[8]
 
-    ## Define coords variable to be used in point raster value attribution.
-    coords = [(x, y) for x, y in zip(water_edge_df.X, water_edge_df.Y)]
+    water_edge_df = water_edge_df.to_crs(DEFAULT_FIM_PROJECTION_CRS)    
 
+    # Ensure water_edge_df is in same CRS as raster
     water_edge_df = water_edge_df.to_crs(DEFAULT_FIM_PROJECTION_CRS)
 
-    ## Use point geometry to determine HAND raster pixel values.
-    with rasterio.open(hand_path) as hand_src, rasterio.open(catchments_path) as catchments_src:
-        water_edge_df['hand'] = [h[0] for h in hand_src.sample(coords)]
-        water_edge_df['hydroid'] = [c[0] for c in catchments_src.sample(coords)]
+    # Get HAND values directly
+    water_edge_df['hand'] = point_query(water_edge_df.geometry, hand_path, interpolate='nearest')
+
+    # Get catchment values
+    water_edge_df['hydroid'] = point_query(water_edge_df.geometry, catchments_path, interpolate='nearest')
 
     water_edge_df = water_edge_df[
         (water_edge_df['hydroid'].notnull()) & (water_edge_df['hand'] > 0) & (water_edge_df['hydroid'] > 0)
@@ -170,17 +176,26 @@ def find_points_in_huc(huc_id):
     '''
 
     water_edge_filepath = os.path.join(input_calib_points_dir, f'{huc_id[:8]}.parquet')
+    print(water_edge_filepath)
+    print(os.path.join(fim_directory, huc_id, 'wbd.gpkg'))
 
-    # load wbd file from outputs directory
-    wbd_geom = gpd.read_file(
-        os.path.join(fim_directory, huc_id, 'wbd.gpkg')
-    ).geometry[0]
-
-    # read water edge points from parquet file using bounding box to limit the data read
+    # Read water edge points
     water_edge_df = gpd.read_parquet(water_edge_filepath)
 
-    # Query the water edge points to only keep those that intersect with the WBD geometry
-    water_edge_df = water_edge_df[water_edge_df.intersects(wbd_geom)].reset_index(drop=True)
+    # Read WBD geometry as a full GeoDataFrame (retaining CRS)
+    wbd_gdf = gpd.read_file(os.path.join(fim_directory, huc_id, 'wbd.gpkg'))
+
+    # Reproject WBD geometry to match points if needed
+    if wbd_gdf.crs != water_edge_df.crs:
+        wbd_gdf = wbd_gdf.to_crs(water_edge_df.crs)
+
+    # Intersect
+    water_edge_df = water_edge_df[water_edge_df.intersects(wbd_gdf.geometry.union_all())].reset_index(drop=True)
+
+    #print("water_edge_df CRS:", water_edge_df.crs)
+    #print("wbd_gdf CRS:", wbd_gdf.crs)
+    print(f"{len(water_edge_df)} points found in {huc_id}")
+
 
     return water_edge_df
 
