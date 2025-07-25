@@ -13,6 +13,7 @@ import rasterio
 from dotenv import load_dotenv
 from rasterstats import point_query
 from pathlib import Path
+import numpy as np
 
 
 from src_roughness_optimization import update_rating_curve
@@ -85,21 +86,50 @@ def process_points(args):
     water_edge_df = args[6]
     htable_path = args[7]
     optional_outputs = args[8]
+    use_usgs_hwm = args[9]
 
     water_edge_df = water_edge_df.to_crs(DEFAULT_FIM_PROJECTION_CRS)    
 
     # Ensure water_edge_df is in same CRS as raster
     water_edge_df = water_edge_df.to_crs(DEFAULT_FIM_PROJECTION_CRS)
 
-    # Get HAND values directly
-    water_edge_df['hand'] = point_query(water_edge_df.geometry, hand_path, interpolate='nearest')
+    # Query HAND values
+    hand_vals = point_query(water_edge_df.geometry, hand_path, interpolate='nearest')
 
-    # Get catchment values
-    water_edge_df['hydroid'] = point_query(water_edge_df.geometry, catchments_path, interpolate='nearest')
+    if use_usgs_hwm:
+        # Ensure height_above_gnd is numeric (coerce bad strings to NaN)
+        water_edge_df['height_above_gnd'] = pd.to_numeric(water_edge_df['height_above_gnd'], errors='coerce')
 
-    water_edge_df = water_edge_df[
-        (water_edge_df['hydroid'].notnull()) & (water_edge_df['hand'] > 0) & (water_edge_df['hydroid'] > 0)
-    ]
+        # Adjust HAND values where both HAND and height_above_gnd are valid
+        adjusted_hand = []
+        for hand, height_above_gnd in zip(hand_vals, water_edge_df['height_above_gnd']):
+            height_above_gnd = height_above_gnd * 0.3048  # convert ft to m
+            if hand is None or np.isnan(hand):
+                adjusted_hand.append(np.nan)
+            elif pd.notnull(height_above_gnd) and height_above_gnd > 0:
+                adjusted_hand.append(hand + height_above_gnd)
+            else:
+                adjusted_hand.append(hand)
+        water_edge_df['hand'] = adjusted_hand
+    else:
+        # Just assign unadjusted hand values
+        water_edge_df['hand'] = hand_vals
+
+    print(hand_path)
+    print(len(water_edge_df))
+
+    # Group hydroids by unique submitter values (as sets)
+    submitter_sets = water_edge_df.groupby('hydroid')['submitter'].apply(lambda x: set(x))
+
+    # Identify hydroids with ONLY 'usgs_hwm' as submitter
+    hydroids_to_drop = submitter_sets[submitter_sets == {'usgs_hwm'}].index
+    print("hydroids to drop")
+    print(hydroids_to_drop)
+
+    # Drop all rows with those hydroids
+    water_edge_df = water_edge_df[~water_edge_df['hydroid'].isin(hydroids_to_drop)]
+
+    print(len(water_edge_df))
 
     ## Check that there are valid obs in the water_edge_df (not empty)
     if water_edge_df.empty:
@@ -162,7 +192,7 @@ def process_points(args):
     return log_text
 
 
-def find_points_in_huc(huc_id, find_points_in_huc):
+def find_points_in_huc(huc_id, use_usgs_hwm, log_file):
     '''
     This function loads the .parquet file containing points attributed with the input huc id into a GDataFrame
 
@@ -184,16 +214,28 @@ def find_points_in_huc(huc_id, find_points_in_huc):
     # Read original water edge points
     water_edge_df = gpd.read_parquet(water_edge_filepath)
 
-    # If USGS HWM data exist for the HUC, merge them with the original points 
-    if use_usgs_hwm == True:
-        # Check if parquet file exists in USGS HWM directory
+    if use_usgs_hwm:
         usgs_hwm_parquet_dir = os.getenv("input_calib_points_usgs_hwm_dir")
-        potential_usgs_water_edge_filepath = Path(usgs_hwm_parquet_dir) / Path(water_edge_filepath).name
-        if os.path.exists(potential_usgs_water_edge_filepath):
-            usgs_hwm_water_edge_df = gpd.read_parquet(potential_usgs_water_edge_filepath)
-            usgs_hwm_water_edge_df = usgs_hwm_water_edge_df.to_crs(water_edge_df.crs)
-            water_edge_df = gpd.GeoDataFrame(pd.concat([water_edge_df, usgs_hwm_water_edge_df], ignore_index=True, sort=False))
-            water_edge_df.set_geometry('geometry', inplace=True)
+        if usgs_hwm_parquet_dir:
+            potential_usgs_water_edge_filepath = Path(usgs_hwm_parquet_dir) / Path(water_edge_filepath).name
+            if potential_usgs_water_edge_filepath.exists():
+                try:
+                    usgs_hwm_water_edge_df = gpd.read_parquet(potential_usgs_water_edge_filepath)
+                    if usgs_hwm_water_edge_df.crs != water_edge_df.crs:
+                        usgs_hwm_water_edge_df = usgs_hwm_water_edge_df.to_crs(water_edge_df.crs)
+
+                    water_edge_df = gpd.GeoDataFrame(
+                        pd.concat([water_edge_df, usgs_hwm_water_edge_df], ignore_index=True, sort=False)
+                    )
+                    water_edge_df.set_geometry('geometry', inplace=True)
+                    log_file.write(f"USGS HWM points merged for {huc_id}")
+                except Exception as e:
+                    log_file.write(f"Failed to process USGS HWM for {huc_id}: {str(e)}\n")
+            else:
+                log_file.write(f"No USGS HWM file found for {huc_id} — skipping.\n")
+        else:
+            log_file.write("Environment variable 'input_calib_points_usgs_hwm_dir' not set — skipping USGS merge.\n")
+
 
     # Read WBD geometry as a full GeoDataFrame (retaining CRS)
     wbd_gdf = gpd.read_file(os.path.join(fim_directory, huc_id, 'wbd.gpkg'))
@@ -204,11 +246,6 @@ def find_points_in_huc(huc_id, find_points_in_huc):
 
     # Intersect
     water_edge_df = water_edge_df[water_edge_df.intersects(wbd_gdf.geometry.union_all())].reset_index(drop=True)
-
-    #print("water_edge_df CRS:", water_edge_df.crs)
-    #print("wbd_gdf CRS:", wbd_gdf.crs)
-    print(f"{len(water_edge_df)} points found in {huc_id}")
-
 
     return water_edge_df
 
@@ -310,7 +347,7 @@ def ingest_points_layer(fim_directory, job_number, debug_outputs_option, log_fil
     ## Define paths to relevant HUC HAND data.
     for huc in huc_list:
         huc_branches_dir = os.path.join(fim_directory, huc, 'branches')
-        water_edge_df = find_points_in_huc(huc, use_usgs_hwm)
+        water_edge_df = find_points_in_huc(huc, use_usgs_hwm, log_file)
         print(f"{len(water_edge_df)} points found in " + str(huc))
         log_file.write(f"{len(water_edge_df)} points found in " + str(huc) + '\n')
 
@@ -404,6 +441,7 @@ def ingest_points_layer(fim_directory, job_number, debug_outputs_option, log_fil
                         water_edge_df,
                         htable_path,
                         debug_outputs_option,
+                        use_usgs_hwm
                     ]
                 )
 

@@ -119,6 +119,8 @@ def update_rating_curve(
         calb_type = 'calb_coef_ras2fim'
     elif source_tag == 'ripple1d_rating':
         calb_type = 'calb_coef_ripple1d'
+    elif source_tag == 'ripple1d_rating':
+        calb_type = 'calb_coef_ripple1d'
     else:
         log_text += "WARNING - unknown calibration data source type: " + str(source_tag) + '\n'
 
