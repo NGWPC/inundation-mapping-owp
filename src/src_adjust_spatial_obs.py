@@ -88,24 +88,26 @@ def process_points(args):
     optional_outputs = args[8]
     use_usgs_hwm = args[9]
 
-    # Ensure water_edge_df is in same CRS as raster
-    water_edge_df = water_edge_df.to_crs(DEFAULT_FIM_PROJECTION_CRS)    
+    # Reproject to FIM CRS
+    water_edge_df = water_edge_df.to_crs(DEFAULT_FIM_PROJECTION_CRS)
 
-    # Ensure water_edge_df is in same CRS as raster
+    # Prepare coordinate pairs
+    coords = [(x, y) for x, y in zip(water_edge_df.X, water_edge_df.Y)]
 
-    # Query HAND values
-    hand_vals = point_query(water_edge_df.geometry, hand_path, interpolate='nearest')
+    # Open rasters and sample values
+    with rasterio.open(hand_path) as hand_src, rasterio.open(catchments_path) as catchments_src:
+        raw_hand_vals = [h[0] for h in hand_src.sample(coords)]
+        hydroid_vals = [c[0] for c in catchments_src.sample(coords)]
 
+    # Assign to dataframe
+    water_edge_df['hydroid'] = hydroid_vals
 
-    # If use_usgs_hwm is True, attempt to sum the height above ground from HWM obs with HAND value
     if use_usgs_hwm:
-        # Ensure height_above_gnd is numeric (coerce bad strings to NaN)
+        print("Adjusting HAND values with height_above_gnd...")
         water_edge_df['height_above_gnd'] = pd.to_numeric(water_edge_df['height_above_gnd'], errors='coerce')
-
-        # Adjust HAND values where both HAND and height_above_gnd are valid
         adjusted_hand = []
-        for hand, height_above_gnd in zip(hand_vals, water_edge_df['height_above_gnd']):
-            height_above_gnd = height_above_gnd * 0.3048  # convert ft to m
+        for hand, height_above_gnd in zip(raw_hand_vals, water_edge_df['height_above_gnd']):
+            height_above_gnd = height_above_gnd * 0.3048  # ft to m
             if hand is None or np.isnan(hand):
                 adjusted_hand.append(np.nan)
             elif pd.notnull(height_above_gnd) and height_above_gnd > 0:
@@ -114,10 +116,14 @@ def process_points(args):
                 adjusted_hand.append(hand)
         water_edge_df['hand'] = adjusted_hand
     else:
-        # Just assign unadjusted hand values
-        water_edge_df['hand'] = hand_vals
+        water_edge_df['hand'] = raw_hand_vals
 
-    water_edge_df['hydroid'] = point_query(water_edge_df.geometry, catchments_path, interpolate='nearest')
+    # Optional filtering
+    water_edge_df = water_edge_df[
+        (water_edge_df['hydroid'].notnull()) & 
+        (water_edge_df['hand'] > 0) & 
+        (water_edge_df['hydroid'] > 0)
+    ]
 
     try:
         water_edge_df = water_edge_df[
@@ -229,6 +235,7 @@ def find_points_in_huc(huc_id, use_usgs_hwm, log_file):
                 try:
                     usgs_hwm_water_edge_df = gpd.read_parquet(potential_usgs_water_edge_filepath)
                     if usgs_hwm_water_edge_df.crs != water_edge_df.crs:
+                        print("Reprojecting USGS HWM points to match water edge CRS...")
                         usgs_hwm_water_edge_df = usgs_hwm_water_edge_df.to_crs(water_edge_df.crs)
 
                     water_edge_df = gpd.GeoDataFrame(
@@ -249,6 +256,7 @@ def find_points_in_huc(huc_id, use_usgs_hwm, log_file):
 
     # Reproject WBD geometry to match points if needed
     if wbd_gdf.crs != water_edge_df.crs:
+        print("Reprojecting wbd...")
         wbd_gdf = wbd_gdf.to_crs(water_edge_df.crs)
 
     # Intersect
