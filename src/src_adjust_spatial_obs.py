@@ -88,13 +88,14 @@ def process_points(args):
     optional_outputs = args[8]
     use_usgs_hwm = args[9]
 
+    # Ensure water_edge_df is in same CRS as raster
     water_edge_df = water_edge_df.to_crs(DEFAULT_FIM_PROJECTION_CRS)    
 
     # Ensure water_edge_df is in same CRS as raster
-    water_edge_df = water_edge_df.to_crs(DEFAULT_FIM_PROJECTION_CRS)
 
     # Query HAND values
     hand_vals = point_query(water_edge_df.geometry, hand_path, interpolate='nearest')
+
 
     # If use_usgs_hwm is True, attempt to sum the height above ground from HWM obs with HAND value
     if use_usgs_hwm:
@@ -116,16 +117,24 @@ def process_points(args):
         # Just assign unadjusted hand values
         water_edge_df['hand'] = hand_vals
 
+    water_edge_df['hydroid'] = point_query(water_edge_df.geometry, catchments_path, interpolate='nearest')
+
+    try:
+        water_edge_df = water_edge_df[
+            (water_edge_df['hydroid'].notnull()) & (water_edge_df['hand'] > 0) & (water_edge_df['hydroid'] > 0)
+        ]
+    except Exception as e:
+        print("oops")
+        print(e)
+
+    print("grouping!")
+
     # Group hydroids by unique submitter values (as sets)
     submitter_sets = water_edge_df.groupby('hydroid')['submitter'].apply(lambda x: set(x))
 
     # Identify hydroids with ONLY 'usgs_hwm' as submitter
     hydroids_to_drop = submitter_sets[submitter_sets == {'usgs_hwm'}].index
-    print("hydroids to drop")
-    print(hydroids_to_drop)
-
-    # Drop all rows with those hydroids
-    water_edge_df = water_edge_df[~water_edge_df['hydroid'].isin(hydroids_to_drop)]
+    water_edge_df = water_edge_df[~water_edge_df['hydroid'].isin(hydroids_to_drop)]  # Drop all rows with those hydroids
 
     ## Check that there are valid obs in the water_edge_df (not empty)
     if water_edge_df.empty:
