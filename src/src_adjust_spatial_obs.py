@@ -32,9 +32,6 @@ gpd.options.io_engine = "pyogrio"
 load_dotenv('/foss_fim/src/bash_variables.env')
 outputsDir = os.getenv("outputsDir")
 input_calib_points_dir = os.getenv("input_calib_points_dir")
-print(input_calib_points_dir)
-#input_calib_points_dir = r'/data/inputs/rating_curve/water_edge_database/calibration_points_usgs_hwm/'
-print(input_calib_points_dir)
 
 '''
 The script imports .parquet files per HUC8 containing observed FIM extent points and associated flow data.
@@ -223,8 +220,6 @@ def find_points_in_huc(huc_id, use_usgs_hwm, log_file):
     '''
 
     water_edge_filepath = os.path.join(input_calib_points_dir, f'{huc_id[:8]}.parquet')
-    print(water_edge_filepath)
-    print(os.path.join(fim_directory, huc_id, 'wbd.gpkg'))
 
     # Read original water edge points
     water_edge_df = gpd.read_parquet(water_edge_filepath)
@@ -260,7 +255,6 @@ def find_points_in_huc(huc_id, use_usgs_hwm, log_file):
 
     # Reproject WBD geometry to match points if needed
     if wbd_gdf.crs != water_edge_df.crs:
-        print("Reprojecting wbd...")
         wbd_gdf = wbd_gdf.to_crs(water_edge_df.crs)
 
     # Intersect
