@@ -125,20 +125,24 @@ def process_points(args):
         (water_edge_df['hydroid'] > 0)
     ]
 
-    try:
-        water_edge_df = water_edge_df[
-            (water_edge_df['hydroid'].notnull()) & (water_edge_df['hand'] > 0) & (water_edge_df['hydroid'] > 0)
-        ]
-    except Exception as e:
-        print("oops")
-        print(e)
+    water_edge_df = water_edge_df[
+        (water_edge_df['hydroid'].notnull()) & (water_edge_df['hand'] > 0) & (water_edge_df['hydroid'] > 0)
+    ]
 
-    print("grouping!")
+    # Reassign 'submitter' values to reflect all submitters for each hydroid
+    submitter_labels = (
+        water_edge_df.groupby('hydroid')['submitter']
+        .apply(lambda s: ', '.join(sorted(set(s))))
+    )
+
+    # Map the combined label back to each row by hydroid
+    water_edge_df['submitter'] = water_edge_df['hydroid'].map(submitter_labels)
 
     # Group hydroids by unique submitter values (as sets)
     submitter_sets = water_edge_df.groupby('hydroid')['submitter'].apply(lambda x: set(x))
 
     # Identify hydroids with ONLY 'usgs_hwm' as submitter
+    # These are dropped so as to not bias RCs to high end
     hydroids_to_drop = submitter_sets[submitter_sets == {'usgs_hwm'}].index
     water_edge_df = water_edge_df[~water_edge_df['hydroid'].isin(hydroids_to_drop)]  # Drop all rows with those hydroids
 
@@ -162,7 +166,7 @@ def process_points(args):
         # print('Processing points for HUC: ' + str(huc) + '  Branch: ' + str(branch_id))
         ## Get median HAND value for appropriate groups.
         water_edge_median_ds = water_edge_df.groupby(
-            ["hydroid", "flow", "submitter", "coll_time", "flow_unit", "layer"]
+            ["hydroid", "flow", "coll_time", "submitter", "flow_unit", "layer"]
         )['hand'].median()
 
         ## Write user_supplied_n_vals to CSV for next step.
@@ -356,7 +360,7 @@ def ingest_points_layer(fim_directory, job_number, debug_outputs_option, log_fil
     # Initialize process list for multiprocessing.
     procs_list = []
 
-    # huc_list = ['12040103'] # Uncomment for testing
+    #huc_list = ['07080205'] # Uncomment for testing
     # Sort huc_list for helping track progress in future print statments
     huc_list.sort()
     ## Define paths to relevant HUC HAND data.
