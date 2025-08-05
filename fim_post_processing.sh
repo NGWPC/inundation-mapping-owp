@@ -266,7 +266,6 @@ if [ "$src_adjust_spatial" = "True" ] && [ "$src_subdiv_toggle" = "True" ] && [ 
     l_echo $startDiv"Performing SRC adjustments using benchmark point .parquet files"
 
     if [ "$src_adjust_spatial_usgs_hwm" = "True" ]; then
-        echo $srcDir/src_adjust_spatial_obs.py -fim_dir $outputDestDir -j $jobLimit --use-usgs-hwm
         python3 $srcDir/src_adjust_spatial_obs.py -fim_dir $outputDestDir -j $jobLimit --use-usgs-hwm
     else
         python3 $srcDir/src_adjust_spatial_obs.py -fim_dir $outputDestDir -j $jobLimit
