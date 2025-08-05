@@ -99,15 +99,16 @@ def process_points(args):
     # Assign to dataframe
     water_edge_df['hydroid'] = hydroid_vals
 
-    if use_usgs_hwm:
-        print("Adjusting HAND values with height_above_gnd...")
-        water_edge_df['height_above_gnd'] = pd.to_numeric(water_edge_df['height_above_gnd'], errors='coerce')
+    # If usgs_usgs_hwm is True, and if the height_above_gnd column exists, adjust HAND values
+    if use_usgs_hwm and 'height_above_gnd' in water_edge_df.columns:
+        # Assume null values are the actual water edge, so fill them with 0.
+        water_edge_df['height_above_gnd'] = pd.to_numeric(water_edge_df['height_above_gnd'], errors='coerce').fillna(0)
         adjusted_hand = []
         for hand, height_above_gnd in zip(raw_hand_vals, water_edge_df['height_above_gnd']):
             height_above_gnd = height_above_gnd * 0.3048  # ft to m
             if hand is None or np.isnan(hand):
                 adjusted_hand.append(np.nan)
-            elif pd.notnull(height_above_gnd) and height_above_gnd > 0:
+            elif pd.notnull(height_above_gnd) and height_above_gnd >= 0:
                 adjusted_hand.append(hand + height_above_gnd)
             else:
                 adjusted_hand.append(hand)
@@ -115,33 +116,28 @@ def process_points(args):
     else:
         water_edge_df['hand'] = raw_hand_vals
 
-    # Optional filtering
-    water_edge_df = water_edge_df[
-        (water_edge_df['hydroid'].notnull()) & 
-        (water_edge_df['hand'] > 0) & 
-        (water_edge_df['hydroid'] > 0)
-    ]
-
+    # Clean up the dataframe
     water_edge_df = water_edge_df[
         (water_edge_df['hydroid'].notnull()) & (water_edge_df['hand'] > 0) & (water_edge_df['hydroid'] > 0)
     ]
 
-    # Reassign 'submitter' values to reflect all submitters for each hydroid
-    submitter_labels = (
-        water_edge_df.groupby('hydroid')['submitter']
-        .apply(lambda s: ', '.join(sorted(set(s))))
-    )
+    if use_usgs_hwm:
+        # Reassign 'submitter' values to reflect all submitters for each hydroid
+        submitter_labels = (
+            water_edge_df.groupby('hydroid')['submitter']
+            .apply(lambda s: ', '.join(sorted(set(s))) if 'usgs_hwm' in s.values else s.iloc[0])
+        )
 
-    # Map the combined label back to each row by hydroid
-    water_edge_df['submitter'] = water_edge_df['hydroid'].map(submitter_labels)
+        # Map the combined label back to each row by hydroid
+        water_edge_df['submitter'] = water_edge_df['hydroid'].map(submitter_labels)
 
-    # Group hydroids by unique submitter values (as sets)
-    submitter_sets = water_edge_df.groupby('hydroid')['submitter'].apply(lambda x: set(x))
+        # Group hydroids by unique submitter values (as sets)
+        submitter_sets = water_edge_df.groupby('hydroid')['submitter'].apply(lambda x: set(x))
 
-    # Identify hydroids with ONLY 'usgs_hwm' as submitter
-    # These are dropped so as to not bias RCs to high end
-    hydroids_to_drop = submitter_sets[submitter_sets == {'usgs_hwm'}].index
-    water_edge_df = water_edge_df[~water_edge_df['hydroid'].isin(hydroids_to_drop)]  # Drop all rows with those hydroids
+        # Identify hydroids with ONLY 'usgs_hwm' as submitter
+        # These are dropped so as to not bias RCs to high end
+        hydroids_to_drop = submitter_sets[submitter_sets == {'usgs_hwm'}].index
+        water_edge_df = water_edge_df[~water_edge_df['hydroid'].isin(hydroids_to_drop)]  # Drop all rows with those hydroids
 
     ## Check that there are valid obs in the water_edge_df (not empty)
     if water_edge_df.empty:
@@ -160,7 +156,6 @@ def process_points(args):
             )
             water_edge_df.to_file(branch_debug_pts_out_gpkg, driver='GPKG', index=False, engine='fiona')
 
-        # print('Processing points for HUC: ' + str(huc) + '  Branch: ' + str(branch_id))
         ## Get median HAND value for appropriate groups.
         water_edge_median_ds = water_edge_df.groupby(
             ["hydroid", "flow", "coll_time", "submitter", "flow_unit", "layer"]
@@ -234,7 +229,6 @@ def find_points_in_huc(huc_id, use_usgs_hwm, log_file):
                 try:
                     usgs_hwm_water_edge_df = gpd.read_parquet(potential_usgs_water_edge_filepath)
                     if usgs_hwm_water_edge_df.crs != water_edge_df.crs:
-                        print("Reprojecting USGS HWM points to match water edge CRS...")
                         usgs_hwm_water_edge_df = usgs_hwm_water_edge_df.to_crs(water_edge_df.crs)
 
                     water_edge_df = gpd.GeoDataFrame(
