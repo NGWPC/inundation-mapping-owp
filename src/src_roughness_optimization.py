@@ -292,7 +292,7 @@ def update_rating_curve(
         ['HydroID', 'hydroid_calb_coef', 'channel_n_calb', 'overbank_n_calb']
     ]
     if not df_mann_flag.empty:
-        log_text += '!!! Flaged Mannings Roughness values below !!!' + '\n'
+        log_text += '!!! Flagged Mannings Roughness values below !!!' + '\n'
         log_text += df_mann_flag.to_string() + '\n'
 
     ## Create magnitude and ahps column by subsetting the "layer" attribute

@@ -261,10 +261,16 @@ if [ "$src_adjust_ripple1d" = "True" ] && [ "$src_subdiv_toggle" = "True" ] && [
 fi
 
 ## RUN SYNTHETIC RATING CURVE CALIBRATION W/ BENCHMARK POINTS (.parquet files) ##
-if [ "$src_adjust_spatial" = "True" ] && [ "$src_subdiv_toggle" = "True" ]  && [ "$skipcal" = "0" ]; then
+if [ "$src_adjust_spatial" = "True" ] && [ "$src_subdiv_toggle" = "True" ] && [ "$skipcal" = "0" ]; then
     Tstart
     l_echo $startDiv"Performing SRC adjustments using benchmark point .parquet files"
-    python3 $srcDir/src_adjust_spatial_obs.py -fim_dir $outputDestDir -j $jobLimit
+
+    if [ "$src_adjust_spatial_usgs_hwm" = "True" ]; then
+        python3 $srcDir/src_adjust_spatial_obs.py -fim_dir $outputDestDir -j $jobLimit --use-usgs-hwm
+    else
+        python3 $srcDir/src_adjust_spatial_obs.py -fim_dir $outputDestDir -j $jobLimit
+    fi
+
     Tcount
 fi
 
