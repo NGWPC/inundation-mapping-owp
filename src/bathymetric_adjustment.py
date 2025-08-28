@@ -11,7 +11,8 @@ from os.path import join
 
 import geopandas as gpd
 import pandas as pd
-from synthesize_test_cases import progress_bar_handler
+
+from utils.shared_functions import progress_bar_handler
 
 
 def correct_rating_for_bathymetry(fim_dir, huc, bathy_file, verbose):
@@ -40,8 +41,8 @@ def correct_rating_for_bathymetry(fim_dir, huc, bathy_file, verbose):
 
     # Load wbd and use it as a mask to pull the bathymetry data
     fim_huc_dir = join(fim_dir, huc)
-    wbd8_clp = gpd.read_file(join(fim_huc_dir, 'wbd8_clp.gpkg'), engine="pyogrio", use_arrow=True)
-    bathy_data = gpd.read_file(bathy_file, mask=wbd8_clp, engine="fiona")
+    wbd_clp = gpd.read_file(join(fim_huc_dir, 'wbd_clp.gpkg'), engine="pyogrio", use_arrow=True)
+    bathy_data = gpd.read_file(bathy_file, mask=wbd_clp, engine="fiona")
     bathy_data = bathy_data.rename(columns={'ID': 'feature_id'})
 
     # Get src_full from each branch
@@ -121,7 +122,7 @@ def correct_rating_for_bathymetry(fim_dir, huc, bathy_file, verbose):
     return log_text
 
 
-def multi_process_hucs(fim_dir, bathy_file, wbd_buffer, wbd, output_suffix, number_of_jobs, verbose):
+def multi_process_hucs(fim_dir, bathy_file, wbd_buffer, wbd, huc_level, output_suffix, number_of_jobs, verbose):
     """Function for correcting synthetic rating curves. It will correct each branch's
     SRCs in serial based on the feature_ids in the input bathy_file.
 
@@ -137,6 +138,8 @@ def multi_process_hucs(fim_dir, bathy_file, wbd_buffer, wbd, output_suffix, numb
         wbd : str
             Path to wbd input data, e.g.
             "/data/inputs/wbd/WBD_National_EPSG_5070_WBDHU8_clip_dem_domain.gpkg".
+        huc_level : int
+            HUC level to be used. Can be 8, 10, or 12.
         output_suffix : str
             Output filename suffix.
         number_of_jobs : int
@@ -170,13 +173,22 @@ def multi_process_hucs(fim_dir, bathy_file, wbd_buffer, wbd, output_suffix, numb
     # Find applicable HUCs to apply bathymetric adjustment
     # NOTE: This block can be removed if we have estimated bathymetry data for
     # the whole domain later.
-    fim_hucs = [h for h in os.listdir(fim_dir) if re.match(r'\d{8}', h)]
+    regex_pattern = rf'\d{{{huc_level}}}'
+    fim_hucs = [h for h in os.listdir(fim_dir) if re.match(regex_pattern, h)]
     bathy_gdf = gpd.read_file(bathy_file, engine="pyogrio", use_arrow=True)
     buffered_bathy = bathy_gdf.geometry.buffer(wbd_buffer)  # We buffer the bathymetric data to get adjacent
     wbd = gpd.read_file(
         wbd, mask=buffered_bathy, engine="fiona"
     )  # HUCs that could also have bathymetric reaches included
-    hucs_with_bathy = wbd.HUC8.to_list()
+
+    #hucs_with_bathy = wbd.HUC8.to_list()
+    hucs_with_bathy = wbd.filter(regex='HUC\d{1,2}', axis=1)
+    if len(hucs_with_bathy.columns) > 1:
+        raise ValueError(
+            f"More than one HUC column found in WBD file, {hucs_with_bathy.columns}. Please check the WBD file."
+        )
+    else:
+        hucs_with_bathy = hucs_with_bathy.iloc[:, 0].to_list()
     hucs = [h for h in fim_hucs if h in hucs_with_bathy]
     log_file.write(f"Identified {len(hucs)} HUCs that have bathymetric data: {hucs}\n")
     print(f"Identified {len(hucs)} HUCs that have bathymetric data\n")
@@ -191,13 +203,13 @@ def multi_process_hucs(fim_dir, bathy_file, wbd_buffer, wbd, output_suffix, numb
             executor_dict[future] = huc
 
         # Send the executor to the progress bar and wait for all tasks to finish
-        progress_bar_handler(executor_dict, True, f"Running BARC on {len(hucs)} HUCs")
+        progress_bar_handler(executor_dict, f"Running BARC on {len(hucs)} HUCs")
         # Get the returned logs and write to the log file
         for future in executor_dict.keys():
             try:
                 log_file.write(future.result())
             except Exception as ex:
-                print(f"WARNING: {executor_dict[future]} BARC failed for some reason")
+                print(f"ERROR: {executor_dict[future]} BARC failed for some reason")
                 log_file.write(f"ERROR --> {executor_dict[future]} BARC failed (details: *** {ex} )\n")
                 traceback.print_exc(file=log_file)
 
@@ -262,6 +274,13 @@ if __name__ == '__main__':
         type=str,
     )
     parser.add_argument(
+        '-huc_level',
+        '--huc-level',
+        help='HUC level to use',
+        required=True,
+        type=int,
+    )
+    parser.add_argument(
         '-suff',
         '--output-suffix',
         help="Suffix to append to the output log file (e.g. '_global_06_011')",
@@ -292,8 +311,9 @@ if __name__ == '__main__':
     bathy_file = args['bathy_file']
     wbd_buffer = int(args['wbd_buffer'])
     wbd = args['wbd']
+    huc_level = args['huc_level']
     output_suffix = args['output_suffix']
     number_of_jobs = args['number_of_jobs']
     verbose = bool(args['verbose'])
 
-    multi_process_hucs(fim_dir, bathy_file, wbd_buffer, wbd, output_suffix, number_of_jobs, verbose)
+    multi_process_hucs(fim_dir, bathy_file, wbd_buffer, wbd, huc_level, output_suffix, number_of_jobs, verbose)

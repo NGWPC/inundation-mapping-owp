@@ -8,22 +8,16 @@ from glob import glob
 from logging import exception
 
 
-def __read_included_files(parent_dir_path):
-    # TODO: Oct25, 2023: Previously we had this test done against multiple huc lists.
-    # Now in FIM4 we only want it to check against the one file 'included_huc8.lst'.
-    # I have just replaced the pattern, but later we might want to clean this up.
 
-    # filename_patterns = glob(os.path.join(parent_dir_path, 'included_huc*.lst'))
+def __read_included_files(parent_dir_path, huc_level):
+    """
+    Reads the list of HUCs that are included in the analysis
+    """
+    included_huc_list = f'included_huc{huc_level}_withAlaska.lst'
+    filename_pattern = os.path.join(parent_dir_path, included_huc_list)
 
-    included_huc_list = 'included_huc8_withAlaska.lst'  # previous: 'included_huc8.lst'
-    filename_patterns = glob(os.path.join(parent_dir_path, included_huc_list))
-
-    accepted_hucs_set = set()
-    for filename in filename_patterns:
-        with open(filename, 'r') as huc_list_file:
-            file_lines = huc_list_file.readlines()
-            f_list = [fl.rstrip() for fl in file_lines]
-            accepted_hucs_set.update(f_list)
+    with open(filename_pattern, 'r') as f:
+        accepted_hucs_set = {fl.rstrip() for fl in f.readlines()}
 
     return accepted_hucs_set
 
@@ -72,9 +66,32 @@ def __check_for_membership(hucs, accepted_hucs_set):
 
 
 def check_hucs(hucs, inputsDir):
-    huc_list_path = os.path.join(inputsDir, 'huc_lists')
-    accepted_hucs = __read_included_files(huc_list_path)
+
+    def get_huc_level(hucs: set):
+        """
+        Returns the length of the HUCs in the set
+        """
+        huc_lens = {len(huc) for huc in hucs}
+        if len(huc_lens) != 1:
+            raise ValueError("All HUCs must be the same length")
+        
+        return huc_lens.pop()
+
     list_hucs = __read_input_hucs(hucs)
+
+    list_hucs_level = get_huc_level(list_hucs)
+
+    huc_list_path = os.path.join(inputsDir, 'huc_lists')
+    accepted_hucs = __read_included_files(huc_list_path, list_hucs_level)
+    
+    accepted_hucs_level = get_huc_level(accepted_hucs)
+
+
+    if accepted_hucs_level != list_hucs_level:
+        raise ValueError(
+            f"Accepted HUCs and input HUCs are not the same level, {accepted_hucs_level} and {list_hucs_level} respectively"
+        )
+
     __check_for_membership(list_hucs, accepted_hucs)
 
     # we need to return the number of hucs being used.

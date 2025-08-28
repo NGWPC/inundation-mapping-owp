@@ -59,10 +59,11 @@ python3 $srcDir/adjust_thalweg_lateral.py \
 
 ## MASK BURNED DEM FOR STREAMS ONLY ###
 echo -e $startDiv"Mask Burned DEM for Thalweg Only $hucNumber $current_branch_id"
+# previously '--calc="A/B"' which would provide NDVs where B=0? Now should provide 0s where B=0???
 gdal_calc.py --quiet --type=Int32 --overwrite --co "COMPRESS=LZW" --co "BIGTIFF=YES" --co "TILED=YES" \
     -A $tempCurrentBranchDataDir/flowdir_d8_burned_filled_$current_branch_id.tif \
     -B $tempCurrentBranchDataDir/demDerived_streamPixels_$current_branch_id.tif \
-    --calc="A/B" \
+    --calc="A*B" \
     --outfile="$tempCurrentBranchDataDir/flowdir_d8_burned_filled_flows_$current_branch_id.tif" \
     --NoDataValue=0
 
@@ -97,7 +98,7 @@ $srcDir/split_flows.py -f $tempCurrentBranchDataDir/demDerived_reaches_$current_
     -d $tempCurrentBranchDataDir/dem_thalwegCond_$current_branch_id.tif \
     -s $tempCurrentBranchDataDir/demDerived_reaches_split_$current_branch_id.gpkg \
     -p $tempCurrentBranchDataDir/demDerived_reaches_split_points_$current_branch_id.gpkg \
-    -w $tempHucDataDir/wbd8_clp.gpkg \
+    -w $tempHucDataDir/wbd_clp.gpkg \
     -l $tempHucDataDir/nwm_lakes_proj_subset.gpkg \
     -n $b_arg \
     -m $max_split_distance_meters \
@@ -179,7 +180,7 @@ python3 $srcDir/filter_catchments_and_add_attributes.py \
     -f $tempCurrentBranchDataDir/demDerived_reaches_split_$current_branch_id.gpkg \
     -c $tempCurrentBranchDataDir/gw_catchments_reaches_filtered_addedAttributes_$current_branch_id.gpkg \
     -o $tempCurrentBranchDataDir/demDerived_reaches_split_filtered_$current_branch_id.gpkg \
-    -w $tempHucDataDir/wbd8_clp.gpkg \
+    -w $tempHucDataDir/wbd_clp.gpkg \
     -u $hucNumber
 
 ## RASTERIZE NEW CATCHMENTS AGAIN ##
@@ -240,7 +241,7 @@ python3 $srcDir/add_crosswalk.py \
     -j $tempCurrentBranchDataDir/src_$current_branch_id.json \
     -x $tempCurrentBranchDataDir/crosswalk_table_$current_branch_id.csv \
     -t $tempCurrentBranchDataDir/hydroTable_$current_branch_id.csv \
-    -w $tempHucDataDir/wbd8_clp.gpkg \
+    -w $tempHucDataDir/wbd_clp.gpkg \
     -b $b_arg \
     -y $tempCurrentBranchDataDir/nwm_catchments_proj_subset.tif \
     -m $manning_n \

@@ -95,23 +95,13 @@ def update_rating_curve(
     - output_src_json:      src.json file with new SRC discharge values
 
     '''
-    print(
-        "Processing "
-        + str(source_tag)
-        + " calibration for huc --> "
-        + str(huc)
-        + '  branch id: '
-        + str(branch_id)
-    )
+
+    print(f"Processing {str(source_tag)} calibration for huc --> {str(huc)} branch id: {str(branch_id)}")
+
     log_text = (
-        "\nProcessing "
-        + str(source_tag)
-        + " calibration for huc --> "
-        + str(huc)
-        + '  branch id: '
-        + str(branch_id)
-        + '\n'
+        f"\nProcessing {str(source_tag)} calibration for huc --> {str(huc)} branch id: {str(branch_id)} \n"
     )
+
     log_text += "DOWNSTREAM_THRESHOLD: " + str(down_dist_thresh) + 'km\n'
     log_text += "Merge Previous Adj Values: " + str(merge_prev_adj) + '\n'
     df_nvalues = water_edge_median_df.copy()
@@ -127,13 +117,17 @@ def update_rating_curve(
         calb_type = 'calb_coef_usgs'
     elif source_tag == 'ras2fim_rating':
         calb_type = 'calb_coef_ras2fim'
+    elif source_tag == 'ripple1d_rating':
+        calb_type = 'calb_coef_ripple1d'
     else:
-        log_text += "ERROR - unknown calibration data source type: " + str(source_tag) + '\n'
+        log_text += "WARNING - unknown calibration data source type: " + str(source_tag) + '\n'
 
     ## Read in the hydroTable.csv and check wether it has previously been updated
     # (rename default columns if needed)
     df_htable = pd.read_csv(
-        htable_path, dtype={'HUC': object, 'last_updated': object, 'submitter': object, 'obs_source': object}
+        htable_path,
+        dtype={'HUC': object, 'last_updated': object, 'submitter': object, 'obs_source': object},
+        low_memory=False,
     )
     df_prev_adj = pd.DataFrame()  # initialize empty df for populating/checking later
     if 'precalb_discharge_cms' not in df_htable.columns:  # need this column to exist before continuing
@@ -168,9 +162,12 @@ def update_rating_curve(
             }
         )
         df_prev_adj_htable = df_prev_adj_htable.groupby(["HydroID"]).first()
-        # Only keep previous USGS rating curve adjustments (previous spatial obs adjustments are not retained)
+        # Only keep previous USGS, ras2fim, or ripple1d rating curve adjustments
+        #   (previous spatial obs adjustments are not retained)
         df_prev_adj = df_prev_adj_htable[
-            df_prev_adj_htable['obs_source_prev'].str.contains("usgs_rating|ras2fim_rating", na=False)
+            df_prev_adj_htable['obs_source_prev'].str.contains(
+                "usgs_rating|ras2fim_rating|ripple1d_rating", na=False
+            )
         ]
         log_text += (
             'HUC: '
@@ -202,7 +199,7 @@ def update_rating_curve(
     for index, row in df_nvalues.iterrows():
         if row.hydroid not in df_htable['HydroID'].values:
             print(
-                'ERROR: HydroID for calb point was not found in the hydrotable (check hydrotable) for HUC: '
+                'WARNING: HydroID for calb point was not found in the hydrotable (check hydrotable) for HUC: '
                 + str(huc)
                 + '  branch id: '
                 + str(branch_id)
@@ -210,7 +207,7 @@ def update_rating_curve(
                 + str(row.hydroid)
             )
             log_text += (
-                'ERROR: HydroID for calb point was not found in the hydrotable (check hydrotable) for HUC: '
+                'WARNING: HydroID for calb point was not found in the hydrotable (check hydrotable) for HUC: '
                 + str(huc)
                 + '  branch id: '
                 + str(branch_id)
@@ -224,7 +221,7 @@ def update_rating_curve(
             df_htable_hydroid = df_htable[(df_htable.HydroID == row.hydroid) & (df_htable.stage > 0)]
             if df_htable_hydroid.empty:
                 print(
-                    'ERROR: df_htable_hydroid is empty but expected data: '
+                    'WARNING: df_htable_hydroid is empty but expected data: '
                     + str(huc)
                     + '  branch id: '
                     + str(branch_id)
@@ -232,7 +229,7 @@ def update_rating_curve(
                     + str(row.hydroid)
                 )
                 log_text += (
-                    'ERROR: df_htable_hydroid is empty but expected data: '
+                    'WARNING: df_htable_hydroid is empty but expected data: '
                     + str(huc)
                     + '  branch id: '
                     + str(branch_id)
@@ -257,13 +254,13 @@ def update_rating_curve(
 
     if 'discharge_cms' not in df_nvalues:
         print(
-            'ERROR: "discharge_cms" column does not exist in df_nvalues df: '
+            'WARNING: "discharge_cms" column does not exist in df_nvalues df: '
             + str(huc)
             + '  branch id: '
             + str(branch_id)
         )
         log_text += (
-            'ERROR: "discharge_cms" column does not exist in df_nvalues df: '
+            'WARNING: "discharge_cms" column does not exist in df_nvalues df: '
             + str(huc)
             + '  branch id: '
             + str(branch_id)
@@ -295,7 +292,7 @@ def update_rating_curve(
         ['HydroID', 'hydroid_calb_coef', 'channel_n_calb', 'overbank_n_calb']
     ]
     if not df_mann_flag.empty:
-        log_text += '!!! Flaged Mannings Roughness values below !!!' + '\n'
+        log_text += '!!! Flagged Mannings Roughness values below !!!' + '\n'
         log_text += df_mann_flag.to_string() + '\n'
 
     ## Create magnitude and ahps column by subsetting the "layer" attribute
@@ -465,7 +462,11 @@ def update_rating_curve(
 
                         try:
                             output_catchments.to_file(
-                                catchments_poly_path, driver="GPKG", index=False, overwrite=True
+                                catchments_poly_path,
+                                driver="GPKG",
+                                index=False,
+                                overwrite=True,
+                                engine='fiona',
                             )  # overwrite the previous layer
 
                         except Exception as e:
@@ -483,7 +484,11 @@ def update_rating_curve(
                             try:
                                 # Attempt to write to the file again
                                 output_catchments.to_file(
-                                    catchments_poly_path, driver="GPKG", index=False, overwrite=True
+                                    catchments_poly_path,
+                                    driver="GPKG",
+                                    index=False,
+                                    overwrite=True,
+                                    engine='fiona',
                                 )
                                 log_text += 'Successful second attempt to write output_catchments gpkg' + '\n'
                             except Exception as e:
@@ -515,7 +520,9 @@ def update_rating_curve(
                             "gw_catchments_src_adjust_" + str(branch_id) + ".gpkg",
                         )
                         output_catchments = input_catchments.merge(df_nmerge, how='left', on='HydroID')
-                        output_catchments.to_file(output_catchments_fileName, driver="GPKG", index=False)
+                        output_catchments.to_file(
+                            output_catchments_fileName, driver="GPKG", index=False, engine='fiona'
+                        )
                         output_catchments = None
 
                 ## Merge the final ManningN dataframe to the original hydroTable
@@ -534,7 +541,7 @@ def update_rating_curve(
                 )  # drop these columns to avoid duplicates where merging with the full hydroTable df
                 df_htable = df_htable.merge(df_nmerge, how='left', on='HydroID')
                 df_htable['calb_applied'] = np.where(
-                    df_htable['calb_coef_final'].notnull(), 'True', 'False'
+                    df_htable['calb_coef_final'].notna(), 'True', 'False'
                 )  # create true/false column to clearly identify where new roughness values are applied
 
                 ## Calculate new discharge_cms with new adjusted ManningN
@@ -713,9 +720,10 @@ def group_manningn_calc(df_nmerge, down_dist_thresh):
                 lid_count = 1
             prev_lid = df_nmerge.loc[index,'ahps_lid']
             '''
-        if np.isnan(
-            df_nmerge.loc[index, 'hydroid_calb_coef']
-        ):  # check if the hydroid_calb_coef value is nan (indicates a non-calibrated hydroid)
+        # check if the hydroid_calb_coef value is nan (indicates a non-calibrated hydroid)
+        # if np.isnan(df_nmerge.loc[index, 'hydroid_calb_coef']):
+        ## Switch to use pd.na, since df_nmerge is a DataFrame, not numpy array
+        if pd.isna(df_nmerge.loc[index, 'hydroid_calb_coef']):
             df_nmerge.loc[index, 'accum_dist'] = (
                 row['LENGTHKM'] + dist_accum
             )  # calculate accumulated river distance

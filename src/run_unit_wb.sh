@@ -2,6 +2,9 @@
 
 # Do not call this file directly. Call fim_process_unit_wb.sh which calls this file.
 
+# huc level
+export huc_level=${#hucNumber}
+
 ## SOURCE FILE AND FUNCTIONS ##
 # load the various environment files
 args_file=$outputDestDir/runtime_args.env
@@ -33,14 +36,18 @@ huc2Identifier=${hucNumber:0:2}
 if [ $huc2Identifier -eq 19 ]; then
     huc_CRS=$ALASKA_CRS
     huc_input_DEM_domain=$input_DEM_domain_Alaska
+    input_DEM=$input_DEM_Alaska
     dem_domain_filename=DEM_Domain.gpkg
+
 else
     huc_CRS=$DEFAULT_FIM_PROJECTION_CRS
     huc_input_DEM_domain=$input_DEM_domain
+    input_DEM=$input_DEM
     dem_domain_filename=HUC6_dem_domain.gpkg
+
 fi
 
-echo -e $startDiv"Using CRS: $huc_CRS"
+echo -e $startDiv"Using CRS: $huc_CRS" ## debug
 
 ## INITIALIZE TOTAL TIME TIMER ##
 T_total_start
@@ -55,9 +62,37 @@ cp -a $pre_clip_huc_dir/$hucNumber/. $tempHucDataDir
 # For buffer_stream_branches.py
 cp $huc_input_DEM_domain $tempHucDataDir
 # For usgs_gage_unit_setup.py
-cp $inputsDir/usgs_gages/usgs_gages.gpkg $tempHucDataDir
-cp $ras_rating_curve_points_gpkg $tempHucDataDir
 cp $inputsDir/ahps_sites/nws_lid.gpkg $tempHucDataDir
+cp $inputsDir/usgs_gages/usgs_gages.gpkg $tempHucDataDir
+
+# Check if the $hucNumber directory exists in the ras2fim $inputsDir and src_adjust_ras2fim is set to True
+if [ -d "$ras2fim_input_dir/$hucNumber" ] && [ "$src_adjust_ras2fim" = "True" ]; then
+    ras_rating_gpkg="$ras2fim_input_dir/$hucNumber/$ras_rating_curve_gpkg_filename"
+    ras_rating_csv="$ras2fim_input_dir/$hucNumber/$ras_rating_curve_csv_filename"
+    if [ -f "$ras_rating_gpkg" ]; then
+        cp "$ras_rating_gpkg" $tempHucDataDir
+        echo "Copied $ras_rating_gpkg to $tempHucDataDir"
+    else
+        echo "File $ras_rating_gpkg does not exist. Skipping copy."
+    fi
+    if [ -f "$ras_rating_csv" ]; then
+        cp "$ras_rating_csv" $tempHucDataDir
+        echo "Copied $ras_rating_csv to $tempHucDataDir"
+    else
+        echo "File $ras_rating_csv does not exist. Skipping copy."
+    fi
+fi
+
+# Check if the $hucNumber directory exists in the ripple1d_input_dir and src_adjust_ripple1d is set to True
+if [ -d "$ripple1d_input_dir/$hucNumber" ] && [ "$src_adjust_ripple1d" = "True" ]; then
+    ripple1d_rating_file="$ripple1d_input_dir/$hucNumber/$ripple1d_rating_curve_filename"
+    if [ -f "$ripple1d_rating_file" ]; then
+        cp "$ripple1d_rating_file" $tempHucDataDir
+        echo "Copied $ripple1d_rating_file to $tempHucDataDir"
+    else
+        echo "File $ripple1d_rating_file does not exist. Skipping copy."
+    fi
+fi
 
 ## DERIVE LEVELPATH  ##
 echo -e $startDiv"Generating Level Paths for $hucNumber"
@@ -67,6 +102,7 @@ $srcDir/derive_level_paths.py -i $tempHucDataDir/nwm_subset_streams.gpkg \
     -r "ID" \
     -o $tempHucDataDir/nwm_subset_streams_levelPaths.gpkg \
     -d $tempHucDataDir/nwm_subset_streams_levelPaths_dissolved.gpkg \
+    -de $tempHucDataDir/nwm_subset_streams_levelPaths_dissolved_extended.gpkg \
     -e $tempHucDataDir/nwm_headwaters.gpkg \
     -c $tempHucDataDir/nwm_catchments_proj_subset.gpkg \
     -t $tempHucDataDir/nwm_catchments_proj_subset_levelPaths.gpkg \
@@ -168,7 +204,7 @@ if [ "$levelpaths_exist" = "1" ]; then
     echo -e $startDiv"Rasterize Reach Boolean $hucNumber (Branches)"
     gdal_rasterize -q -ot Int32 -burn 1 -init 0 -co "COMPRESS=LZW" -co "BIGTIFF=YES" -co "TILED=YES" \
         -te $xmin $ymin $xmax $ymax -ts $ncols $nrows \
-        $tempHucDataDir/nwm_subset_streams_levelPaths_dissolved.gpkg $tempHucDataDir/flows_grid_boolean.tif
+        $tempHucDataDir/nwm_subset_streams_levelPaths_dissolved_extended.gpkg $tempHucDataDir/flows_grid_boolean.tif
 fi
 
 ## RASTERIZE NWM Levelpath HEADWATERS (1 & 0) ##
@@ -261,7 +297,7 @@ if [ "$levelpaths_exist" = "1" ]; then
 fi
 
 # Ensure the file dem_burned_filled.tif exists before proceeding
-if [[ ! -f $tempHucDataDir/dem_burned_filled.tif ]]; then
+if [[ "$levelpaths_exist" = "1" && ! -f $tempHucDataDir/dem_burned_filled.tif ]]; then
    echo "The file: $tempHucDataDir/dem_burned_filled.tif does not exist"
    echo "Exiting ..."
    exit 2
@@ -309,6 +345,8 @@ if [ -f $tempHucDataDir/nwm_subset_streams_levelPaths.gpkg ]; then
         -gages $tempHucDataDir/usgs_gages.gpkg \
         -nwm $tempHucDataDir/nwm_subset_streams_levelPaths.gpkg \
         -ras $tempHucDataDir/$ras_rating_curve_gpkg_filename \
+        -ripple $tempHucDataDir/$ripple1d_rating_curve_filename \
+        -wbd $tempHucDataDir/wbd.gpkg \
         -o $tempHucDataDir/usgs_subset_gages.gpkg \
         -huc $hucNumber \
         -ahps $tempHucDataDir/nws_lid.gpkg \
@@ -327,7 +365,8 @@ if [ -f $tempHucDataDir/usgs_subset_gages_$branch_zero_id.gpkg ]; then
         -dem $tempCurrentBranchDataDir/dem_meters_$branch_zero_id.tif \
         -dem_adj $tempCurrentBranchDataDir/dem_thalwegCond_$branch_zero_id.tif \
         -out $tempCurrentBranchDataDir -b $branch_zero_id \
-        -huc_CRS $huc_CRS
+        -huc_CRS $huc_CRS \
+        -huc_number $hucNumber
 fi
 
 ## CLEANUP BRANCH ZERO OUTPUTS ##
@@ -367,8 +406,8 @@ if [ -f $deny_unit_list ]; then
 fi
 
 echo "---- HUC $hucNumber - branches have now been processed"
-Calc_Duration $branch_processing_start_time
-echo
+Calc_Duration "Duration for processing branches : " $branch_processing_start_time
+#echo
 
 # WRITE TO LOG FILE CONTAINING ALL HUC PROCESSING TIMES
 total_duration_display="$hucNumber,$(Calc_Time $huc_start_time),$(Calc_Time_Minutes_in_Percent $huc_start_time)"
@@ -376,5 +415,5 @@ echo "$total_duration_display" >> "$outputDestDir/logs/unit/total_duration_run_b
 
 date -u
 echo "---- HUC processing for $hucNumber is complete"
-Calc_Duration $huc_start_time
+Calc_Duration "Duration for huc processing: " $huc_start_time
 echo

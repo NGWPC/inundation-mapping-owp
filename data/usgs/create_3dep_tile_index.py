@@ -26,6 +26,7 @@ import tempfile
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 from dotenv import load_dotenv
+import geopandas as gpd
 
 srcDir = os.getenv('srcDir')
 load_dotenv(os.path.join(srcDir, 'bash_variables.env'))
@@ -77,7 +78,7 @@ def get_1m_project_urls(base_url : str) -> List[str]:
     project_urls = []
     for link in links:
         href = link.get('href')
-        if href and '/' in href and not href.startswith('/'):
+        if href and '/' in href and not href.startswith('/') and ('https://www.' in href) and (href != '../'):
             project_url = base_url + href
             project_urls.append(project_url)
 
@@ -93,7 +94,11 @@ def get_1m_tile_urls(project_urls : List[str]) -> List[str]:
 
     for project_url in tqdm(project_urls, desc="Fetching 3DEP 1m tile URLs by project"):
         # Fetch the content of each folder
-        response = retry_request(project_url)
+        try:
+            response = retry_request(project_url)
+        except:
+            print(f"Failed to fetch {project_url}")
+            continue
 
         soup = BeautifulSoup(response.content, 'html.parser')
         links = soup.find_all('a')
@@ -106,7 +111,11 @@ def get_1m_tile_urls(project_urls : List[str]) -> List[str]:
 
         # Fetch the content of the TIFF folder
         tiff_dir_contents = project_url + tiff_folder_link.get('href')
-        response = retry_request(tiff_dir_contents)
+        try:
+            response = retry_request(tiff_dir_contents)
+        except:
+            print(f"Failed to fetch {tiff_dir_contents}")
+            continue
 
         soup = BeautifulSoup(response.content, 'html.parser')
         links = soup.find_all('a')

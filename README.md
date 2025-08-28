@@ -10,6 +10,8 @@ This software uses the Height Above Nearest Drainage (HAND) method to generate R
 
 # FIM Version 4
 
+#### Note: While we use the phrase "FIM" regularily, the phrase "HAND" is also used and is generally interchangeable. Most output folders now follow the convenction of "hand_4_x_x_x".
+
 ## Computational Requirements
 A system with a minumum of 36GiB of RAM and 4 cores/threads is necessary to execute the code as is. If a system with 36GiB of RAM is not available to you, you can alter the `GDAL_CACHEMAX` value (in bytes) set in [`agreedem.py`](src/agreedem.py) & [`unique_pixel_and_allocation.py`](src/unique_pixel_and_allocation.py)
 
@@ -61,17 +63,19 @@ aws s3 ls s3://noaa-nws-owp-fim/hand_fim/  --request-payer
 
 Download a directory of sample outputs for a single HUC8:
 ```
-aws s3 sync s3://noaa-nws-owp-fim/hand_fim/outputs/fim_4_4_0_0/12090301 \
+aws s3 sync s3://noaa-nws-owp-fim/hand_fim/outputs/hand_4_5_2_11/12090301 \
+    /your_local_folder_name/12090301 --profile esip
 ```
+
 This still works for NGWPC without getting AWS credentials
 ```
-    /your_local_folder_name/12090301 --profile esip
-aws s3 sync s3://noaa-nws-owp-fim/hand_fim/outputs/fim_4_4_0_0/12090301 \
+aws s3 sync s3://noaa-nws-owp-fim/hand_fim/outputs/fim_4_5_2_11/12090301 \
     /your_local_folder_name/12090301 --request-payer
 ```
-By adjusting pathing, you can also download entire directories such as the `fim_4_4_0_0` folder. An entire output FIM set (e.g. `fim_4_4_0_0`) is approximately 1.1 TB.
 
-**Note**: There may be newer editions than `fim_4_4_0_0`, and it is recommended to adjust the command above for the latest version.
+By adjusting pathing, you can also download entire directories such as the `hand_4_5_2_11` folder. An entire output HAND set is approximately 1.7 TB.
+
+**Note**: There may be newer editions than `hand_4_5_11_1`, and it is recommended to adjust the command above for the latest version.
 
 ## Setting up your Environment
 
@@ -102,7 +106,7 @@ Git will auto create a subfolder named `inundation-mapping` where the code will 
 
 ### Installation
 1. Install Docker : [Docker](https://docs.docker.com/get-docker/)
-2. Build Docker Image : `docker build -f Dockerfile -t <image_name>:<tag> <path/to/repository>`
+2. Build Docker Image : `docker build -f Dockerfile.(dev|prod) -t <image_name>:<tag> <path/to/repository>`
 3. Create FIM group on host machine:
     - Linux: `groupadd -g 1370800178 fim`
 4. Change group ownership of repo (needs to be redone when a new file occurs in the repo):
@@ -145,7 +149,7 @@ docker run --rm -it --name <your_container_name> \
 ```
 For example:
 ```bash
-docker run --rm -it --name robs_container \
+docker run --rm -it --name Robs_container \
     -v /home/projects/fim/code/inundation-mapping/:/foss_fim \
     -v /home/projects/fim/data/outputs/:/outputs \
     -v /home/projects/fim/data/outputs_temp/:/fim_temp \

@@ -10,7 +10,7 @@ from utils.fim_enums import FIM_exit_codes
 from utils.shared_variables import FIM_ID
 
 
-gpd.options.io_engine = "pyogrio"
+gpd.options.io_engine = "fiona"
 
 
 def filter_catchments_and_add_attributes(
@@ -25,8 +25,10 @@ def filter_catchments_and_add_attributes(
     wbd = gpd.read_file(wbd_filename)
     input_flows = gpd.read_file(input_flows_filename)
 
+    huc_level = len(huc_code)
+
     # filter segments within huc boundary
-    select_flows = tuple(map(str, map(int, wbd[wbd.HUC8.str.contains(huc_code)][FIM_ID])))
+    select_flows = tuple(map(str, map(int, wbd.query(f"HUC{huc_level} == '{huc_code}'")[FIM_ID])))
 
     if input_flows.HydroID.dtype != 'str':
         input_flows.HydroID = input_flows.HydroID.astype(str)
@@ -55,8 +57,10 @@ def filter_catchments_and_add_attributes(
 
         if not output_catchments.empty:
             try:
-                output_catchments.to_file(output_catchments_filename, driver="GPKG", index=False)
-                output_flows.to_file(output_flows_filename, driver="GPKG", index=False)
+                output_catchments.to_file(
+                    output_catchments_filename, driver="GPKG", index=False, engine='fiona'
+                )
+                output_flows.to_file(output_flows_filename, driver="GPKG", index=False, engine='fiona')
             except ValueError:
                 # this is not an exception, but a custom exit code that can be trapped
                 print("There are no flowlines in the HUC after stream order filtering.")
