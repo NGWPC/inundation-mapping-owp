@@ -2,6 +2,7 @@
 *.swp
 *.swo
 *.swn
+slurm/slurm_outputs
 .nfs*
 __pycache__/
 config/**

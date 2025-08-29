@@ -16,30 +16,38 @@ def __read_included_files(parent_dir_path, huc_level):
     included_huc_list = f'included_huc{huc_level}_withAlaska.lst'
     filename_pattern = os.path.join(parent_dir_path, included_huc_list)
 
-    with open(filename_pattern, 'r') as f:
-        accepted_hucs_set = {fl.rstrip() for fl in f.readlines()}
-
+    if os.path.isfile(filename_pattern):
+        with open(filename_pattern, 'r') as f:
+            accepted_hucs_set = {fl.rstrip() for fl in f.readlines()}
+    else:
+        raise Exception(f"Included huc list unavailable: {filename_pattern}.")
+        
     return accepted_hucs_set
 
 
 def __read_input_hucs(hucs):
     huc_list = set()
-    if os.path.isfile(hucs[0]):
-        source_file_extension = pathlib.Path(hucs[0]).suffix
 
-        if source_file_extension.lower() != ".lst":
-            raise Exception("Incoming file must be in .lst format if submitting a file name and path.")
+    first_item = hucs[0]
+    source_file_extension = pathlib.Path(first_item).suffix.lower()
 
-        with open(hucs[0], 'r') as hucs_file:
+    # Case 1: A file (has extension)
+    if source_file_extension:
+        if source_file_extension != ".lst":
+            raise ValueError(f"Incoming file must be in .lst format, got '{source_file_extension}' instead.")
+
+        if not os.path.isfile(first_item):
+            raise FileNotFoundError(f"File not found: {first_item}, verify huc list and/or check docker mounts.")
+
+        with open(first_item, "r") as hucs_file:
             file_lines = hucs_file.readlines()
             f_list = [__clean_huc_value(fl) for fl in file_lines]
             huc_list.update(f_list)
+
+    # Case 2: A single HUC or HUCs in quotes 
     else:
-        if len(hucs) > 0:
-            for huc in hucs:
-                huc_list.add(__clean_huc_value(huc))
-        else:
-            huc_list.add(__clean_huc_value(hucs[0]))
+        for huc in hucs:
+            huc_list.add(__clean_huc_value(huc))
 
     return huc_list
 
@@ -81,6 +89,10 @@ def check_hucs(hucs, inputsDir):
 
     list_hucs_level = get_huc_level(list_hucs)
 
+    _valid_huc_levels = {6, 8, 10, 12}
+    if list_hucs_level not in _valid_huc_levels:
+        raise ValueError("Huc level must be 6, 8, 10, or 12.")
+
     huc_list_path = os.path.join(inputsDir, 'huc_lists')
     accepted_hucs = __read_included_files(huc_list_path, list_hucs_level)
     
@@ -96,7 +108,7 @@ def check_hucs(hucs, inputsDir):
 
     # we need to return the number of hucs being used.
     # it is not easy to return a value to bash, except with standard out.
-    # so we will just to a print line back (Note: This means there can be no other
+    # so we will just print a line back (Note: This means there can be no other
     # print commands in this file, even for debugging, as bash will pick up the
     # very first "print"
     print(len(list_hucs))
