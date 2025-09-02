@@ -35,6 +35,7 @@ in
     -h|--help)
         shift
         usage
+        exit
         ;;
     *) ;;
     esac
@@ -95,7 +96,7 @@ source $srcDir/bash_functions.env
 source $srcDir/bash_variables.env
 
 # Tell the system the name and location of the post processing log
-log_file_name=$outputDestDir/post_proc.log
+log_file_name=$outputDestDir/logs/post_proc.log
 Set_log_file_path $log_file_name
 
 l_echo ""
@@ -105,6 +106,15 @@ l_echo "---- Started: `date -u`"
 echo ""
 T_total_start
 post_proc_start_time=`date +%s`
+
+echo "Concatenate all processing time files into a CSV file"
+csvFile=$outputDestDir/logs/unit/total_duration_run_by_unit_all_HUCs.csv
+
+if [[ ! -f "$csvFile" ]]; then
+    python3 $srcDir/duration_system.py -fim $outputDestDir -o $csvFile
+else
+    echo "Duration CSV file already exists, skipping..."
+fi
 
 ## RUN UPDATE HYDROTABLE AND SRC ##
 # Define the counter file
@@ -181,13 +191,16 @@ if [ "$bathymetry_adjust" = "True" ]; then
     l_echo $startDiv"Performing Bathymetry Adjustment routine"
     Tstart
     # Run bathymetry adjustment routine
+    aibathy_toggle=${ai_toggle} #:-0}
     python3 $srcDir/bathymetric_adjustment.py \
         -fim_dir $outputDestDir \
-        -bathy $bathymetry_file \
+        -bathy_ehydro $bathy_file_ehydro \
+        -bathy_aibased $bathy_file_aibased \
         -buffer $wbd_buffer \
         -wbd $input_WBD_gdb \
         -huc_level $huc_level \
-        -j $jobLimit
+        -j $jobLimit \
+        -ait $aibathy_toggle
     Tcount
 fi
 
@@ -217,6 +230,28 @@ if [ "$src_subdiv_toggle" = "True" ] && [ "$src_bankfull_toggle" = "True" ]; the
     Tcount
 fi
 
+## RUN NONMONOTONIC SRC ADJUSTMENT ROUTINE ##
+if [ "$nonmonotonic_src_adjustment" = "True" ]; then
+    l_echo $startDiv"Performing Nonmonotonic SRC Adjustment routine"
+    # Run Nonmonotonic SRCs Adjustment routine -flows $bankfull_flows_file \
+    Tstart
+    python3 $srcDir/nonmonotonic_src_adjustment.py \
+        -fim_dir $outputDestDir \
+        -j $jobLimit
+    Tcount
+fi
+
+## RUN LONGITUDINAL FILTER ROUTINE ##
+if [ "$logitudinal_filter" = "True" ]; then
+    l_echo $startDiv"Performing longitudinal discharge adjustment routine"
+    Tstart
+    python3 $srcDir/longitudinal_flow_adjustment.py \
+        -fim_dir $outputDestDir \
+        -j $jobLimit \
+
+    Tcount
+fi
+
 ## RUN SYNTHETIC RATING CURVE CALIBRATION W/ USGS GAGE RATING CURVES ##
 if [ "$src_adjust_usgs" = "True" ] && [ "$src_subdiv_toggle" = "True" ] && [ "$skipcal" = "0" ]; then
     Tstart
@@ -225,6 +260,7 @@ if [ "$src_adjust_usgs" = "True" ] && [ "$src_subdiv_toggle" = "True" ] && [ "$s
     python3 $srcDir/src_adjust_usgs_rating_trace.py \
         -run_dir $outputDestDir \
         -usgs_rc $usgs_rating_curve_csv \
+        -usgs_sites $usgs_acceptable_gages_path \
         -nwm_recur $nwm_recur_file \
         -huc_level $huc_level \
         -j $jobLimit
@@ -274,19 +310,6 @@ if [ "$src_adjust_spatial" = "True" ] && [ "$src_subdiv_toggle" = "True" ] && [ 
     Tcount
 fi
 
-## AGGREGATE BRANCH TABLES ##
-l_echo $startDiv"Aggregating branch hydrotables"
-
-Tstart
-python3 $srcDir/aggregate_by_huc.py \
-    -fim $outputDestDir \
-    -huc_level $huc_level \
-    -i $fim_inputs \
-    -htable \
-    -bridge \
-    -j $jobLimit
-Tcount
-
 
 ## PERFORM MANUAL CALIBRATION
 if [ "$manual_calb_toggle" = "True" ] && [ -f $man_calb_file ]; then
@@ -297,6 +320,19 @@ if [ "$manual_calb_toggle" = "True" ] && [ -f $man_calb_file ]; then
         -calb_file $man_calb_file
     Tcount
 fi
+
+
+## AGGREGATE BRANCH TABLES ##
+l_echo $startDiv"Aggregating branch hydrotables"
+Tstart
+python3 $srcDir/aggregate_by_huc.py \
+    -fim $outputDestDir \
+    -huc_level $huc_level \
+    -i $fim_inputs \
+    -htable \
+    -bridge \
+    -j $jobLimit
+Tcount
 
 
 l_echo $startDiv"Combining crosswalk tables"

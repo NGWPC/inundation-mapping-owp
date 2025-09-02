@@ -11,9 +11,15 @@ from os.path import join
 
 import geopandas as gpd
 import pandas as pd
+from dotenv import load_dotenv
 
 from heal_bridges_osm import flows_from_hydrotable
 from utils.shared_functions import progress_bar_handler
+
+
+load_dotenv('/foss_fim/src/bash_variables.env')
+DEFAULT_FIM_PROJECTION_CRS = os.getenv('DEFAULT_FIM_PROJECTION_CRS')
+ALASKA_CRS = os.getenv('ALASKA_CRS')
 
 
 class HucDirectory(object):
@@ -162,8 +168,9 @@ class HucDirectory(object):
         self.bridge_dtypes = {
             'osmid': int,
             'name': str,
-            'max_hand': float,
-            'max_hand_75': float,
+            'threshold_hand': float,
+            'threshold_hand_75': float,
+            'has_lidar_tif': str,
             'feature_id': int,
             'HydroID': int,
             'order_': str,
@@ -231,6 +238,8 @@ class HucDirectory(object):
             return
 
         bridge_pnts = gpd.read_file(bridge_filename)
+        for col, dtype in self.bridge_dtypes.items():
+            bridge_pnts[col] = bridge_pnts[col].astype(dtype)
         if bridge_pnts.empty:
             return
         hydrotable_filename = join(branch_path, f'hydroTable_{branch_id}.csv')
@@ -277,12 +286,64 @@ class HucDirectory(object):
                     self.agg_usgs_elev_table.to_csv(usgs_elev_table_file, index=False)
 
             if hydro_table_flag:
+
                 hydrotable_file = join(self.huc_dir_path, 'hydrotable.csv')
                 if os.path.isfile(hydrotable_file):
                     os.remove(hydrotable_file)
 
                 if not self.agg_hydrotable.empty:
                     self.agg_hydrotable.to_csv(hydrotable_file, index=False)
+
+                    # TODO: Jun 2025: Rename poorly named columns like SurfaceArea (m2)
+                    # and go though all tools removing csv orfeather in favour of parquet
+                    # (keep an eye on LoFI/Prob code)
+
+                    # Streamline inundation downstream
+                    # some columns like Bathymetry_source are always string even on load of the files
+                    # but we cast some to make sure (notice feature_id and huc for example?)
+                    # TODO: Jun 2025: branch_id should become string for consistency
+                    dtype = {
+                        "HUC": str,
+                        "branch_id": int,
+                        "feature_id": str,
+                        "HydroID": str,
+                        "stage": float,
+                        "discharge_cms": float,
+                        "SurfaceArea (m2)": int,
+                        "LakeID": int,
+                    }
+                    htable_req_cols = [
+                        "HUC",
+                        "branch_id",
+                        "feature_id",
+                        "HydroID",
+                        "stage",
+                        "discharge_cms",
+                        "SurfaceArea (m2)",
+                        "LakeID",
+                        "Bathymetry_source",
+                    ]
+                    temp_df = self.agg_hydrotable.reset_index()
+                    temp_df = temp_df[htable_req_cols].astype(dtype)
+                    temp_df.to_feather(hydrotable_file.replace('.csv', '.feather'))
+
+                    # Note: with using the hydroid and feature_id as indexes which has huge performance
+                    # gains, especially for HydroVIS, it will change a bit of how we work and view that data.
+                    # We will end using a lot more df.query commands instead of loc and iloc.
+                    # Note: Indexes are not columns and you cant use them quite the same way. Watch for
+                    # datatypes above.
+                    # example usage:
+                    #       Good:       df.query("feature_id == '10926557'")
+                    #       Won't work: df.loc[df["feature_id"] == '10926557']
+                    temp_df = temp_df.sort_values(['HydroID', 'feature_id', 'discharge_cms'])
+                    temp_df = temp_df.set_index(['HydroID', 'feature_id'])
+                    temp_df.to_parquet(
+                        hydrotable_file.replace('.csv', '.parquet'),
+                        compression='zstd',
+                        index=True,
+                        write_page_checksum=True,
+                        write_page_index=True,
+                    )
 
             if src_cross_flag:
                 src_crosswalk_file = join(self.huc_dir_path, 'src_full_crosswalked.csv')
@@ -321,8 +382,8 @@ class HucDirectory(object):
                     b0 = b0.rename(columns={'feature_id': 'crossing_feature_id'})
                     bridge_pnts = bridge_pnts.merge(b0, on='osmid', how='left')
                     # Remove bridge points that have the same osmid and feature_id
-                    g = bridge_pnts.groupby(['osmid', 'feature_id'])['max_discharge'].transform('min')
-                    bridge_pnts = bridge_pnts.copy()[(bridge_pnts['max_discharge'] == g)]
+                    g = bridge_pnts.groupby(['osmid', 'feature_id'])['threshold_discharge'].transform('min')
+                    bridge_pnts = bridge_pnts.copy()[(bridge_pnts['threshold_discharge'] == g)]
                     # Set backwater bridge sites
                     bridge_pnts['is_backwater'] = 0
                     c = bridge_pnts.groupby(['osmid'])['feature_id'].transform('count')
@@ -330,6 +391,16 @@ class HucDirectory(object):
                         (c > 1) & (bridge_pnts.feature_id != bridge_pnts.crossing_feature_id), 'is_backwater'
                     ] = 1
                     # Write file
+                    bridge_pnts = bridge_pnts.astype(self.bridge_dtypes, errors='ignore')
+
+                    # Set the CRS if it is not already set
+                    huc2Identifier = huc_id[:2]
+                    if bridge_pnts.crs is None:
+                        # Alaska
+                        if huc2Identifier == '19':
+                            bridge_pnts.set_crs(ALASKA_CRS, inplace=True)
+                        else:
+                            bridge_pnts.set_crs(DEFAULT_FIM_PROJECTION_CRS, inplace=True)
                     bridge_pnts.to_file(bridge_pnts_file, index=False, engine='fiona')
 
             # print(f"agg_by_huc for huc id {huc_id} is done")
@@ -406,6 +477,9 @@ def aggregate_by_huc(
     assert os.path.isdir(fim_directory), f'{fim_directory} is not a valid directory'
 
     # -------------------
+    # TODO: May 19, 2025: It is good to keep this in, but it needs to happen at the top of both fim_pipeline and post
+    # post processing. Currently, you run pipeline, you don't find out until here when this problem exists and
+    # it aborts here.
     # Validation
     total_cpus_available = os.cpu_count() - 2
     if num_job_workers > total_cpus_available:

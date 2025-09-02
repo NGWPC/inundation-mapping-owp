@@ -38,13 +38,9 @@ def accumulate_flow(
         data = src.read(1)
         nodata = src.nodata
         profile = src.profile
-        # transform = src.transform
-        # crs = src.crs
-        # latlon = crs.to_epsg() == 4326
 
     # Convert the TauDEM flow direction raster to a pyflwdir flow direction array
     # temp = data.copy()
-
     temp = np.ndarray(shape=np.shape(data), dtype=np.uint8)
 
     temp[data == 1] = 1
@@ -56,6 +52,8 @@ def accumulate_flow(
     temp[data == 7] = 4
     temp[data == 8] = 2
     temp[data == nodata] = 247
+
+    del data
 
     # temp = temp.astype(np.uint8)
 
@@ -82,6 +80,8 @@ def accumulate_flow(
     # Write the stream pixel raster
     with rio.open(stream_pixel_filename, 'w', **profile, BIGTIFF="YES") as dst2:
         dst2.write(stream, 1)
+
+    del flowaccum, stream
 
 
 if __name__ == '__main__':

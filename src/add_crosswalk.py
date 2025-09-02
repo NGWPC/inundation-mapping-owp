@@ -5,6 +5,7 @@ import json
 import sys
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 from numpy import unique
 from rasterstats import zonal_stats
@@ -14,7 +15,9 @@ from utils.shared_functions import getDriver
 from utils.shared_variables import FIM_ID
 
 
-# TODO - Feb 17, 2023 - We want to explore using FR methodology as branch zero
+# Define acceptable slope range
+SLOPE_MIN = 9.999e-7
+SLOPE_MAX = 0.5
 
 
 def add_crosswalk(
@@ -29,20 +32,24 @@ def add_crosswalk(
     output_hydro_table_fileName,
     input_huc_fileName,
     input_nwmflows_fileName,
-    input_nwmcatras_fileName,
     mannings_n,
-    input_nwmcat_fileName,
-    extent,
     small_segments_filename,
     min_catchment_area,
     min_stream_length,
-    calibration_mode=False,
+    huc_id,
+    iris_sword_slope,
 ):
-    input_catchments = gpd.read_file(input_catchments_fileName, engine="pyogrio", use_arrow=True)
-    input_flows = gpd.read_file(input_flows_fileName, engine="pyogrio", use_arrow=True)
-    input_huc = gpd.read_file(input_huc_fileName, engine="pyogrio", use_arrow=True)
-    input_nwmcat = gpd.read_file(input_nwmcat_fileName, engine="pyogrio", use_arrow=True)
-    input_nwmflows = gpd.read_file(input_nwmflows_fileName, engine="pyogrio", use_arrow=True)
+    # These HUC-level geopackages are being read using the fiona engine because
+    # the pyogrio + arrow engine was giving random segmentation faults that
+    # we think may be due to many branches trying to read the same GPKG.
+    # See issue #1376 for details.
+    input_catchments = gpd.read_file(input_catchments_fileName, engine='fiona')
+    input_flows = gpd.read_file(input_flows_fileName, engine='fiona')
+    input_huc = gpd.read_file(input_huc_fileName, engine='fiona')
+    input_nwmflows = gpd.read_file(input_nwmflows_fileName, engine='fiona')
+    iris_df = pd.read_parquet(iris_sword_slope).rename(
+        columns={'slope_iris_sword': 'SLOPE_IRIS_SWORD', 'id': 'feature_id'}
+    )
     min_catchment_area = float(min_catchment_area)  # 0.25#
     min_stream_length = float(min_stream_length)  # 0.5#
 
@@ -51,21 +58,26 @@ def add_crosswalk(
 
     input_catchments = input_catchments.dissolve(by='HydroID').reset_index()
 
-    ## crosswalk using stream segment midpoint method
-    input_nwmcat = gpd.read_file(input_nwmcat_fileName, mask=input_huc, engine="fiona")
-
-    # only reduce nwm catchments to mainstems if running mainstems
-    if extent == 'MS':
-        input_nwmcat = input_nwmcat.loc[input_nwmcat.mainstem == 1]
-
-    input_nwmcat = input_nwmcat.rename(columns={'ID': 'feature_id'})
-    if input_nwmcat.feature_id.dtype != 'int':
-        input_nwmcat.feature_id = input_nwmcat.feature_id.astype(int)
-    input_nwmcat = input_nwmcat.set_index('feature_id')
-
+    # Rename ID column
     input_nwmflows = input_nwmflows.rename(columns={'ID': 'feature_id'})
     if input_nwmflows.feature_id.dtype != 'int':
         input_nwmflows.feature_id = input_nwmflows.feature_id.astype(int)
+
+    # Handle variable slope column name (AK uses So, CONUS uses Slope)
+    if 'Slope' in input_nwmflows.columns:
+        input_nwmflows = input_nwmflows.rename(columns={'Slope': 'SLOPE_HFAB'})
+    elif 'So' in input_nwmflows.columns:
+        input_nwmflows = input_nwmflows.rename(columns={'So': 'SLOPE_HFAB'})
+    else:
+        input_nwmflows['SLOPE_HFAB'] = np.nan
+        print(
+            f"WARNING: could not find a 'Slope' or 'So' attribute in the NWM hydrofabric at {input_nwmflows_fileName} – setting SLOPE_HFAB to n/a"
+        )
+
+    # Merge IRIS-SWORD slope data with NWM flows
+    input_nwmflows = input_nwmflows.merge(
+        iris_df[['feature_id', 'SLOPE_IRIS_SWORD']], on='feature_id', how='left'
+    )
     input_nwmflows = input_nwmflows.set_index('feature_id')
 
     # Get stream midpoint
@@ -89,7 +101,9 @@ def add_crosswalk(
     crosswalk.loc[crosswalk['distance'] > 100.0, 'feature_id'] = pd.NA
 
     crosswalk = crosswalk.filter(items=['HydroID', 'feature_id', 'distance'])
-    crosswalk = crosswalk.merge(input_nwmflows[['order_']], on='feature_id')
+    crosswalk = crosswalk.merge(input_nwmflows[['order_', 'SLOPE_HFAB', 'SLOPE_IRIS_SWORD']], on='feature_id')
+
+    del input_nwmflows
 
     if crosswalk.empty:
         print("No relevant streams within HUC boundaries.")
@@ -99,6 +113,8 @@ def add_crosswalk(
         input_catchments.HydroID = input_catchments.HydroID.astype(int)
     output_catchments = input_catchments.merge(crosswalk, on='HydroID')
 
+    del input_catchments
+
     if output_catchments.empty:
         print("No valid catchments remain.")
         sys.exit(FIM_exit_codes.NO_VALID_CROSSWALKS.value)
@@ -107,11 +123,15 @@ def add_crosswalk(
         input_flows.HydroID = input_flows.HydroID.astype(int)
     output_flows = input_flows.merge(crosswalk, on='HydroID')
 
+    del input_flows
+
     # added for GMS. Consider adding filter_catchments_and_add_attributes.py to run_by_branch.sh
     if 'areasqkm' not in output_catchments.columns:
         output_catchments['areasqkm'] = output_catchments.geometry.area / (1000**2)
 
     output_flows = output_flows.merge(output_catchments.filter(items=['HydroID', 'areasqkm']), on='HydroID')
+
+    output_flows = output_flows.drop_duplicates(subset='HydroID')
 
     output_flows['ManningN'] = mannings_n
 
@@ -248,12 +268,30 @@ def add_crosswalk(
 
     # calculate src_full
     input_src_base = pd.read_csv(input_srcbase_fileName, dtype=object)
+    input_src_base = input_src_base.rename(columns={' SLOPE': 'SLOPE_RISE_RUN'})
+
     if input_src_base.CatchId.dtype != 'int':
         input_src_base.CatchId = input_src_base.CatchId.astype(int)
 
     input_src_base = input_src_base.merge(
-        output_flows[['ManningN', 'HydroID', 'NextDownID', 'order_']], left_on='CatchId', right_on='HydroID'
+        output_flows[['ManningN', 'HydroID', 'NextDownID', 'order_', 'SLOPE_HFAB', 'SLOPE_IRIS_SWORD']],
+        left_on='CatchId',
+        right_on='HydroID',
     )
+
+    # masks for valid slope values (also only using SWORD for orders >=4)
+    sword_mask = (input_src_base['order_'] >= 4) & (
+        (input_src_base['SLOPE_IRIS_SWORD'] >= SLOPE_MIN) & (input_src_base['SLOPE_IRIS_SWORD'] <= SLOPE_MAX)
+    )
+
+    # hfab_mask = (input_src_base['SLOPE_HFAB'] >= SLOPE_MIN) & (input_src_base['SLOPE_HFAB'] <= SLOPE_MAX)
+
+    # Apply masks to filter out invalid slope values
+    sword_slope = input_src_base['SLOPE_IRIS_SWORD'].where(sword_mask)
+    # hfab_slope = input_src_base['SLOPE_HFAB'].where(hfab_mask)
+
+    # Assign SLOPE values with priority: IRIS_SWORD then RISE_RUN
+    input_src_base['SLOPE'] = sword_slope.combine_first(input_src_base['SLOPE_RISE_RUN'])
 
     input_src_base = input_src_base.rename(columns=lambda x: x.strip(" "))
     input_src_base = input_src_base.apply(pd.to_numeric, **{'errors': 'coerce'})
@@ -276,6 +314,9 @@ def add_crosswalk(
     input_src_base['Bathymetry_source'] = pd.NA
 
     output_src = input_src_base.drop(columns=['CatchId']).copy()
+
+    del input_src_base
+
     if output_src.HydroID.dtype != 'int':
         output_src.HydroID = output_src.HydroID.astype(int)
 
@@ -284,18 +325,52 @@ def add_crosswalk(
         sml_segs.to_csv(small_segments_filename, index=False)
         print("Update rating curves for short reaches.")
 
-        for index, segment in sml_segs.iterrows():
-            short_id = segment[0]
-            update_id = segment[1]
-            new_values = output_src.loc[output_src['HydroID'] == update_id][['Stage', 'Discharge (m3s-1)']]
+        if huc_id.startswith('19'):
+            print("Update rating curves for short reaches in Alaska.")
+            # Create a DataFrame with new values for discharge based on 'update_id'
+            new_values = output_src[output_src['HydroID'].isin(sml_segs['update_id'])][
+                ['HydroID', 'Stage', 'Discharge (m3s-1)']
+            ]
 
-            for src_index, src_stage in new_values.iterrows():
-                output_src.loc[
-                    (output_src['HydroID'] == short_id) & (output_src['Stage'] == src_stage[0]),
-                    ['Discharge (m3s-1)'],
-                ] = src_stage[1]
+            # Merge this new values DataFrame with sml_segs on 'update_id' and 'HydroID'
+            sml_segs_with_values = sml_segs.merge(
+                new_values, left_on='update_id', right_on='HydroID', suffixes=('', '_new')
+            )
+            sml_segs_with_values = sml_segs_with_values[['short_id', 'Stage', 'Discharge (m3s-1)']]
+            merged_output_src = output_src.merge(
+                sml_segs_with_values[['short_id', 'Stage', 'Discharge (m3s-1)']],
+                left_on=['HydroID', 'Stage'],
+                right_on=['short_id', 'Stage'],
+                suffixes=('', '_df2'),
+            )
+            merged_output_src = merged_output_src[['HydroID', 'Stage', 'Discharge (m3s-1)_df2']]
+            output_src = pd.merge(output_src, merged_output_src, on=['HydroID', 'Stage'], how='left')
+
+            del merged_output_src
+
+            output_src['Discharge (m3s-1)'] = output_src['Discharge (m3s-1)_df2'].fillna(
+                output_src['Discharge (m3s-1)']
+            )
+            output_src = output_src.drop(columns=['Discharge (m3s-1)_df2'])
+        else:
+            for index, segment in sml_segs.iterrows():
+                short_id = segment[0]
+                update_id = segment[1]
+                new_values = output_src.loc[output_src['HydroID'] == update_id][
+                    ['Stage', 'Discharge (m3s-1)']
+                ]
+
+                for src_index, src_stage in new_values.iterrows():
+                    output_src.loc[
+                        (output_src['HydroID'] == short_id) & (output_src['Stage'] == src_stage[0]),
+                        ['Discharge (m3s-1)'],
+                    ] = src_stage[1]
+
+    del sml_segs
 
     output_src = output_src.merge(crosswalk[['HydroID', 'feature_id']], on='HydroID')
+
+    del crosswalk
 
     output_crosswalk = output_src[['HydroID', 'feature_id']]
     output_crosswalk = output_crosswalk.drop_duplicates(ignore_index=True)
@@ -318,6 +393,9 @@ def add_crosswalk(
             'HydraulicRadius (m)',
             'WetArea (m2)',
             'Volume (m3)',
+            'SLOPE_HFAB',
+            'SLOPE_IRIS_SWORD',
+            'SLOPE_RISE_RUN',
             'SLOPE',
             'ManningN',
             'Stage',
@@ -359,10 +437,17 @@ def add_crosswalk(
 
     if output_hydro_table.HydroID.dtype != 'str':
         output_hydro_table.HydroID = output_hydro_table.HydroID.astype(str)
+    ## NGWPC Version - merge v4.8.7.3
     output_hydro_table[FIM_ID] = output_hydro_table.loc[:, 'HydroID'].apply(lambda x: str(x)[:max_FIM_ID_len])
+    ## # OWP Version - merge v4.8.7.3
+    # TODO: Jun 2025: Why do we have this column? Likely a bug
+    # output_hydro_table['HydroID Int16'] = output_hydro_table['HydroID'].apply(lambda x: str(int(x[4:])))
+    # output_hydro_table[FIM_ID] = output_hydro_table.loc[:, 'HydroID'].apply(lambda x: str(x)[0:4])
 
     output_hydro_table = output_hydro_table.merge(input_huc.loc[:, [FIM_ID, huc_column_name]], how='left', on=FIM_ID)
 
+    del input_huc
+    
     if output_flows.HydroID.dtype != 'str':
         output_flows.HydroID = output_flows.HydroID.astype(str)
     output_hydro_table = output_hydro_table.merge(
@@ -405,6 +490,8 @@ def add_crosswalk(
     with open(output_src_json_fileName, 'w') as f:
         json.dump(output_src_json, f, sort_keys=True, indent=2)
 
+    del output_catchments, output_flows, output_src, output_crosswalk, output_hydro_table, output_src_json
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -429,23 +516,21 @@ if __name__ == '__main__':
     parser.add_argument("-t", "--output-hydro-table-fileName", help="Hydrotable", required=True)
     parser.add_argument("-w", "--input-huc-fileName", help="HUC boundary", required=True)
     parser.add_argument("-b", "--input-nwmflows-fileName", help="Subest NWM burnlines", required=True)
-    parser.add_argument("-y", "--input-nwmcatras-fileName", help="NWM catchment raster", required=False)
     parser.add_argument(
         "-m",
         "--mannings-n",
         help="Mannings n. Accepts single parameter set or list of parameter set in calibration mode. Currently input as csv.",
         required=True,
     )
-    parser.add_argument("-z", "--input-nwmcat-fileName", help="NWM catchment polygon", required=True)
-    parser.add_argument("-p", "--extent", help="GMS only for now", default="GMS", required=False)
+    parser.add_argument("-u", "--huc-id", help="HUC ID", required=True)
     parser.add_argument(
         "-k", "--small-segments-filename", help="output list of short segments", required=True
     )
-    parser.add_argument(
-        "-c", "--calibration-mode", help="Mannings calibration flag", required=False, action="store_true"
-    )
     parser.add_argument("-e", "--min-catchment-area", help="Minimum catchment area", required=True)
     parser.add_argument("-g", "--min-stream-length", help="Minimum stream length", required=True)
+    parser.add_argument(
+        "-i", "--iris-sword-slope", help="Channel slope data from IRIS-SWORD database", required=True
+    )
 
     args = vars(parser.parse_args())
 
