@@ -1118,8 +1118,8 @@ class StreamNetwork(gpd.GeoDataFrame):
                 extended_id = outlet_id
 
             # add outlet segment to stream network
-            idx = self_extended[branch_id_attribute] == ds_outlet_tuple.levpa_id
-            # idx = (self_extended[branch_id_attribute] == outlet.levpa_id) & (self_extended['ID'] == outlet.ID)
+            # idx = self_extended[branch_id_attribute] == ds_outlet_tuple.levpa_id
+            idx = (self_extended[branch_id_attribute] == outlet.levpa_id) & (self_extended['ID'] == outlet.ID)
 
             if self_extended.loc[idx].empty:
                 idx = self_extended['ID'] == extended_id
@@ -1226,17 +1226,13 @@ class StreamNetwork(gpd.GeoDataFrame):
 
             # Check if the levelpath outlet is external
             if not len(temp_df.merge(self_in_wbd, left_on='to', right_on='ID')) == len(temp_df):
-                # NGWPC Version - merge v4.8.7.3
-                # outlet_id = self_in_wbd.loc[self_in_wbd['to'] == outlet.ID, 'ID'].values[0]
-                # try:
-                #     outlets_extended = add_outlet_segments(outlets_extended, self_copy, outlet_id, outlet)
-                # except LevelPathIsExternal:
-                #     continue
-                # OWP Version - merge v4.8.7.3
                 outlet_stream = self_in_wbd.loc[self_in_wbd['to'] == outlet.ID, 'ID']
                 if not outlet_stream.empty:
                     outlet_id = outlet_stream.values[0]
-                    self = add_outlet_segments(self, self_ref, outlet_id, outlet)
+                    try:
+                        self = add_outlet_segments(self, self_ref, outlet_id, outlet)
+                    except LevelPathIsExternal:
+                        continue
 
         # merges each multi-line string to a singular linestring
         for lpid, row in tqdm(

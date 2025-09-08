@@ -284,34 +284,27 @@ fi
 
 
 ## PIT REMOVE BURNED DEM - BRANCHES (NOT 0) (NWM levelpath streams) ##
-if [ "$levelpaths_exist" = "1" ]; then
-    echo -e $startDiv"Pit remove Burned DEM $hucNumber (Branches)"
-    date -u
-    Tstart
-    if [[ "$pit_fill_method" = "richdem" ]]; then
-        echo "Running richdem (rd_depression_filling) Algorithm..."
-        rd_depression_filling $tempHucDataDir/dem_burned.tif $tempHucDataDir/dem_burned_filled.tif
-    elif [[ "$pit_fill_method" = "wbt" ]]; then
-        echo "Running WBT fill depression Algorithm..."
-        python3 $srcDir/fill_depressions.py -w $tempHucDataDir -m $pit_fill_method
-    elif [[ "$pit_fill_method" = "pyflwdir" ]]; then
-        echo "Running pyflwdir fill depression Algorithm..."
-        python3 $srcDir/fill_depressions.py -w $tempHucDataDir -m $pit_fill_method
-    else
-        echo "The value provided for pit_fill_method parameter:     $pit_fill_method "
-        echo "   is not valid, see config/params_template.env file for valid options."
-        echo -e "Please check your config file. Exiting ..."
-        exit 22
-    fi
-    Tcount
-fi
-
-# Ensure the file dem_burned_filled.tif exists before proceeding
-if [[ "$levelpaths_exist" = "1" && ! -f $tempHucDataDir/dem_burned_filled.tif ]]; then
-   echo "The file: $tempHucDataDir/dem_burned_filled.tif does not exist"
-   echo "Exiting ..."
-   exit 2
-fi
+# if [ "$levelpaths_exist" = "1" ]; then
+#     echo -e $startDiv"Pit remove Burned DEM $hucNumber (Branches)"
+#     date -u
+#     Tstart
+#     if [[ "$pit_fill_method" = "richdem" ]]; then
+#         echo "Running richdem (rd_depression_filling) Algorithm..."
+#         rd_depression_filling $tempHucDataDir/dem_burned.tif $tempHucDataDir/dem_burned_filled.tif
+#     elif [[ "$pit_fill_method" = "wbt" ]]; then
+#         echo "Running WBT fill depression Algorithm..."
+#         python3 $srcDir/fill_depressions.py -w $tempHucDataDir -m $pit_fill_method
+#     elif [[ "$pit_fill_method" = "pyflwdir" ]]; then
+#         echo "Running pyflwdir fill depression Algorithm..."
+#         python3 $srcDir/fill_depressions.py -w $tempHucDataDir -m $pit_fill_method
+#     else
+#         echo "The value provided for pit_fill_method parameter:     $pit_fill_method "
+#         echo "   is not valid, see config/params_template.env file for valid options."
+#         echo -e "Please check your config file. Exiting ..."
+#         exit 22
+#     fi
+#     Tcount
+# fi
 
 ## D8 FLOW DIR - BRANCH 0 (include all NWM streams) ##
 echo -e $startDiv"D8 Flow Directions on Burned DEM $hucNumber $branch_zero_id"

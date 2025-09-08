@@ -478,6 +478,8 @@ def huc_level_clip_vectors_to_wbd(huc, outputs_dir, copy_from_dir, copying_flags
                 '-clipsrc',
                 f'{huc_directory}/wbd_buffered.gpkg',
                 f'{huc_directory}/wbd8_clp.gpkg',
+                # Use below to enable HLP, post merge with v4.8.7.3
+                # f'{huc_directory}/wbd_clp.gpkg',
                 input_WBD_filename,
                 input_NHD_WBHD_layer,
             ],
