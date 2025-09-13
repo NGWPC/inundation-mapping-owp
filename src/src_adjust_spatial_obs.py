@@ -92,9 +92,11 @@ def process_points(args):
     ## Define coords variable to be used in point raster value attribution.
     coords = [(x, y) for x, y in zip(water_edge_df.X, water_edge_df.Y)]
 
-    with open(hydroid_prefixpath, 'r') as file:
-        hydroid_prefix = file.read()
-        int_hid_prefix = int(hydroid_prefix) * 10000
+    ## OWP Version - merge v4.8.7.3
+    ## hydroid_prefixpath file does not exist
+    # with open(hydroid_prefixpath, 'r') as file:
+    #     hydroid_prefix = file.read()
+    #     int_hid_prefix = int(hydroid_prefix) * 10000
 
     ## Use point geometry to determine HAND raster pixel values.
     with rasterio.open(hand_path) as hand_src, rasterio.open(catchments_path) as catchments_src:
@@ -419,6 +421,11 @@ def ingest_points_layer(fim_directory, job_number, debug_outputs_option, log_fil
                 branch_dir,
                 'gw_catchments_reaches_filtered_addedAttributes_crosswalked_' + branch_id + '.gpkg',
             )
+
+            ## Below is from the v4.8.7.3 merge and introduces a breaking change to NGWPC's HLP functionality.
+            ## Since we commented out the call to $toolsDir/convert_to_int16.py in delineate_hydros_and_produce_HAND.sh
+            ##      this file does not exist, but does not need to be commented out here, we commented the reading of
+            ##      the file above.
             hydroid_prefix_path = os.path.join(branch_dir, 'hydroid_prefix.txt')
 
             # Check to make sure the fim output files exist. Continue to next iteration if not and warn user.

@@ -298,8 +298,11 @@ if [ "$current_branch_id" = "$branch_zero_id" ] && [ "$evaluateCrosswalk" = "1" 
         -z $current_branch_id
 fi
 
+## Below is from the v4.8.7.3 merge and introduces a breaking change to NGWPC's HLP functionality.
+##  Notably the HydroId value requirement in src_adjust_spatial_obs.py
+
 ## CONVERSION TO INT16 ##
-echo -e $startDiv"Convert GW Catchments and REM to Int16 $hucNumber $current_branch_id"
-python3 $toolsDir/convert_to_int16.py \
-    -b $tempCurrentBranchDataDir
+# echo -e $startDiv"Convert GW Catchments and REM to Int16 $hucNumber $current_branch_id"
+# python3 $toolsDir/convert_to_int16.py \
+#     -b $tempCurrentBranchDataDir
 
