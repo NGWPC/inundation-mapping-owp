@@ -113,6 +113,7 @@ else:
         "Please check the variable and try again."
     )
 
+
 def __setup_logger(outputs_dir, huc=None, is_multi_proc=False):
     '''
     Set up logging to file. Since log file includes the date, it will be overwritten if this

@@ -132,6 +132,7 @@ def hashfile(file):
     else:
         return None
 
+
 def write_log(list_of_failed_files, file):
     log_file = os.path.join(os.getcwd(), file)
 

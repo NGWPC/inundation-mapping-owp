@@ -524,7 +524,7 @@ def process_bathy_adjustment(
         wbd, mask=buffered_bathy, engine="fiona"
     )  # HUCs that could also have bathymetric reaches included
 
-    #hucs_with_bathy = wbd.HUC8.to_list()
+    # hucs_with_bathy = wbd.HUC8.to_list()
     hucs_with_bathy = wbd.filter(regex='HUC\d{1,2}', axis=1)
     if len(hucs_with_bathy.columns) > 1:
         raise ValueError(
@@ -647,13 +647,7 @@ if __name__ == '__main__':
         required=True,
         type=str,
     )
-    parser.add_argument(
-        '-huc_level',
-        '--huc-level',
-        help='HUC level to use',
-        required=True,
-        type=int,
-    )
+    parser.add_argument('-huc_level', '--huc-level', help='HUC level to use', required=True, type=int)
     parser.add_argument(
         '-suff',
         '--output-suffix',

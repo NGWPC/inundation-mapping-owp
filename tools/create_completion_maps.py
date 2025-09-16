@@ -12,8 +12,8 @@ import pandas as pd
 WBD_PATH = r'/data/inputs/wbd/WBD_National.gpkg'
 # WBD_PATH = r'/efs/fim-data/hand_fim/inputs/wbd/WBD_National_South_Alaska_WBDHU12.gpkg'
 
-HUC_NUMBER=12
-HUC_LEVEL=f'HUC{HUC_NUMBER}'
+HUC_NUMBER = 12
+HUC_LEVEL = f'HUC{HUC_NUMBER}'
 
 PW_INSTANCE_TYPE_DICT = {
     "r6a.2xlarge": 0.47,
@@ -29,13 +29,12 @@ PW_INSTANCE_TYPE_DICT = {
     "c6i.24xlarge": 4.09,
     "c7i.12xlarge": 2.16,
     "m7i.12xlarge": 2.43,
-    
 }
 
 
 def join_dict_to_geopackage(dict_data):
-    # Define the geopackage layer 
-    layer=f'WBDHU{HUC_NUMBER}'
+    # Define the geopackage layer
+    layer = f'WBDHU{HUC_NUMBER}'
     print(f"Loading {layer} layer from {WBD_PATH} ")
     print("This may take a few minutes...")
 
@@ -46,16 +45,17 @@ def join_dict_to_geopackage(dict_data):
 
     # Apply the correct data types
     df = df.apply(lambda row: apply_data_types(row), axis=1)
-    
+
     # Make sure the index is a column in the DataFrame, this will be our HUC_LEVEL
     df[HUC_LEVEL] = df.index
-    
+
     # Merge the geodataframe with the dataframe
     merged_gdf = gdf.merge(df, on=HUC_LEVEL, how='left')
 
     # print(merged_gdf.columns)
 
     return merged_gdf
+
 
 '''
 def parse_log_to_dict(filepath):
@@ -111,13 +111,13 @@ def parse_log(file_path):
         "Socket messages received",
         "Signals delivered",
         "Page size (bytes)",
-        "Exit status"
+        "Exit status",
     ]
 
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
-        
+
         # Reverse the list to start checking from the bottom of the file
         for line in reversed(lines):
             for key in keys:
@@ -133,7 +133,8 @@ def parse_log(file_path):
 
     return data
 
-# Use two crawl directory functions depending on num_threads. 
+
+# Use two crawl directory functions depending on num_threads.
 # The single threaded version is kept solely for ease of maintenance.
 def crawl_directory_single_threaded(directory):
     results = {}
@@ -147,15 +148,16 @@ def crawl_directory_single_threaded(directory):
             huc = filename[:HUC_NUMBER]  # The first n digits of the filename
             # print(f"Scraping log files for {huc}" )
             file_path = os.path.join(directory, filename)
-            
+
             parsed_data = parse_log(file_path)
             if parsed_data:
                 results[huc] = parsed_data
             else:
                 print(f"Unable to parse data from {file_path}")
                 hung_files.append(filename)
-                #results[huc] = 
+                # results[huc] =
     return results, hung_files
+
 
 def crawl_directory_multi_threaded(directory, num_threads):
     results = {}
@@ -195,12 +197,13 @@ def crawl_directory_multi_threaded(directory, num_threads):
 
     return results, hung_files
 
-def  update_log_with_costs(log_dict, cost_per_hour):
-    
+
+def update_log_with_costs(log_dict, cost_per_hour):
+
     # Assign total counter variables
     total_wc_time_hours = 0
     total_run_cost = 0
-    
+
     for key, entry in log_dict.items():
         # Initialize default costs
         entry['system_cost_usd'] = None
@@ -233,7 +236,9 @@ def  update_log_with_costs(log_dict, cost_per_hour):
         if "Elapsed (wall clock) time (h:mm:ss or m:ss)" in entry:
             try:
                 raw_time_str = entry["Elapsed (wall clock) time (h:mm:ss or m:ss)"]
-                time_str = raw_time_str.split('): ')[-1]  # Taking the last part after '): ' to ensure we get the time
+                time_str = raw_time_str.split('): ')[
+                    -1
+                ]  # Taking the last part after '): ' to ensure we get the time
 
                 # Split the time string into its components
                 parts = time_str.split(':')
@@ -252,12 +257,14 @@ def  update_log_with_costs(log_dict, cost_per_hour):
                 elif len(parts) == 2:
                     # m:ss format
                     total_seconds += int(parts[0]) * 60
-                
+
                 elapsed_wc_time_minutes = total_seconds / 60
                 elapsed_wc_time_hours = total_seconds / 3600
                 total_wc_time_hours += round(elapsed_wc_time_hours, 2)
                 elapsed_wc_cost = elapsed_wc_time_hours * cost_per_hour
-                entry['elapsed_wall_clock_cost_usd'] = round(elapsed_wc_cost, 2)  # rounding to two decimal places
+                entry['elapsed_wall_clock_cost_usd'] = round(
+                    elapsed_wc_cost, 2
+                )  # rounding to two decimal places
                 total_run_cost += round(elapsed_wc_cost, 2)
                 # print(f"Cost for {key} is ${round(elapsed_wc_cost, 2)}")
                 entry['elapsed_wall_clock_mins'] = round(elapsed_wc_time_minutes, 2)
@@ -293,19 +300,19 @@ def apply_data_types(data):
         "Socket messages received": int,
         "Signals delivered": int,
         "Page size (bytes)": int,
-        "Exit status": str
+        "Exit status": str,
     }
 
     for key, value in data_types.items():
-            if key in data:
-                try:
-                    # Special handling for percent field to strip the '%' character
-                    if key == "Percent of CPU this job got":
-                        data[key] = int(data[key].replace('%', '').strip())
-                    else:
-                        data[key] = value(data[key])
-                except ValueError:
-                    data[key] = None  # Handle conversion errors by setting to None or a default value
+        if key in data:
+            try:
+                # Special handling for percent field to strip the '%' character
+                if key == "Percent of CPU this job got":
+                    data[key] = int(data[key].replace('%', '').strip())
+                else:
+                    data[key] = value(data[key])
+            except ValueError:
+                data[key] = None  # Handle conversion errors by setting to None or a default value
     return data
 
 
@@ -321,34 +328,35 @@ def calculate_storage(log_dict, unit_log_dir, efs_storage_cost_monthly=None, s3_
         huc_outputs = os.path.join(outputs_dir_derived, huc)
         if os.path.exists(huc_outputs):
             root_directory = Path(huc_outputs)
-            dir_size_gb = round(sum(f.stat().st_size for f in root_directory.glob('**/*') if f.is_file()) / (1024 ** 3), 2)
-            
+            dir_size_gb = round(
+                sum(f.stat().st_size for f in root_directory.glob('**/*') if f.is_file()) / (1024**3), 2
+            )
+
             if efs_storage_cost_monthly != None:
-                huc_storage_efs_cost_per_month_usd = dir_size_gb*efs_storage_cost_monthly
+                huc_storage_efs_cost_per_month_usd = dir_size_gb * efs_storage_cost_monthly
                 total_efs_storage_cost_monthly += round(huc_storage_efs_cost_per_month_usd, 2)
-                huc_storage_efs_cost_per_3month_usd = huc_storage_efs_cost_per_month_usd*3.0
-                huc_storage_efs_cost_per_6month_usd = huc_storage_efs_cost_per_month_usd*6.0
+                huc_storage_efs_cost_per_3month_usd = huc_storage_efs_cost_per_month_usd * 3.0
+                huc_storage_efs_cost_per_6month_usd = huc_storage_efs_cost_per_month_usd * 6.0
             else:
                 huc_storage_efs_cost_per_month_usd = np.nan
                 huc_storage_efs_cost_per_3month_usd = np.nan
                 huc_storage_efs_cost_per_6month_usd = np.nan
 
             if s3_cost_monthly != None:
-                huc_storage_s3_cost_per_month_usd = dir_size_gb*s3_cost_monthly
+                huc_storage_s3_cost_per_month_usd = dir_size_gb * s3_cost_monthly
                 total_s3_storage_cost_monthly += round(huc_storage_s3_cost_per_month_usd, 2)
-                huc_storage_s3_cost_per_3month_usd = huc_storage_s3_cost_per_month_usd*3.0
-                huc_storage_s3_cost_per_6month_usd = huc_storage_s3_cost_per_month_usd*6.0
+                huc_storage_s3_cost_per_3month_usd = huc_storage_s3_cost_per_month_usd * 3.0
+                huc_storage_s3_cost_per_6month_usd = huc_storage_s3_cost_per_month_usd * 6.0
             else:
                 huc_storage_s3_cost_per_month_usd = np.nan
                 huc_storage_s3_cost_per_3month_usd = np.nan
                 huc_storage_s3_cost_per_6month_usd = np.nan
-        
+
         else:
             # write message to dict
             dir_size_gb = np.nan
-            
 
-        # Update log_dict    
+        # Update log_dict
         log_dict[huc]['storage_rate_monthly'] = efs_storage_cost_monthly
         log_dict[huc]['dir_size_gb'] = dir_size_gb
         log_dict[huc]['efs_storage_cost_month_usd'] = huc_storage_efs_cost_per_month_usd
@@ -367,8 +375,9 @@ def calculate_storage(log_dict, unit_log_dir, efs_storage_cost_monthly=None, s3_
         print(f"Total S3 Storage Cost per Month:  ${round(total_s3_storage_cost_monthly, 2)}")
     else:
         print("No S3 storage cost value provided.")
-    
+
     return log_dict
+
 
 # Count candidate branches and actually generated branches
 def count_branches(log_dict, unit_log_dir):
@@ -416,7 +425,7 @@ def count_branches(log_dict, unit_log_dir):
 
 
 def scrape_traceback_for_non_zeros(log_dict, unit_log_dir):
-    
+
     for huc in log_dict:
         if int(log_dict[huc]['Exit status']) != 0:
             huc_log_file = os.path.join(unit_log_dir, huc + "_unit.log")
@@ -433,10 +442,11 @@ def scrape_traceback_for_non_zeros(log_dict, unit_log_dir):
 
     return log_dict
 
+
 def get_max_memory_in_gb(log_dict):
-    
+
     # Set "counter" for largest memory used
-    largest_memory_used=0
+    largest_memory_used = 0
 
     for huc in log_dict:
         if int(log_dict[huc]['Maximum resident set size (kbytes)']) != 0:
@@ -450,14 +460,19 @@ def get_max_memory_in_gb(log_dict):
             max_gigabytes = ""
         # log_dict[huc]['max_gb'] = max_gigabytes
 
-    print(f"Most memory used for all {HUC_LEVEL}s is {largest_memory_used} GBs from {largest_memory_used_huc}")
-    
+    print(
+        f"Most memory used for all {HUC_LEVEL}s is {largest_memory_used} GBs from {largest_memory_used_huc}"
+    )
+
     return log_dict
 
-def generate_geopackage(instance_type, unit_log_dir, output_file, efs_storage_cost_monthly, s3_cost_monthly, num_threads):
-    
-    #log_dict = parse_log_to_dict(pipeline_summary_unit_file)
-    
+
+def generate_geopackage(
+    instance_type, unit_log_dir, output_file, efs_storage_cost_monthly, s3_cost_monthly, num_threads
+):
+
+    # log_dict = parse_log_to_dict(pipeline_summary_unit_file)
+
     # If multithreading is desired, use appropriate crawl directory method
     if num_threads < 1:
         log_dict, hung_files = crawl_directory_single_threaded(unit_log_dir)
@@ -473,19 +488,19 @@ def generate_geopackage(instance_type, unit_log_dir, output_file, efs_storage_co
     except KeyError:
         print("Instance type isn't recognized")
         quit()
-    
+
     # Calculate maximum memory usage
     get_max_memory_in_gb(log_dict)
 
     # Calculate cost
     if instance_type != None:
-        log_dict =  update_log_with_costs(log_dict, cost_per_hour)
+        log_dict = update_log_with_costs(log_dict, cost_per_hour)
 
     # Calculate storage costs
     if efs_storage_cost_monthly != None or s3_cost_monthly != None:
         print("Calculating storage...")
         log_dict = calculate_storage(log_dict, unit_log_dir, efs_storage_cost_monthly, s3_cost_monthly)
-        
+
     # exit()
 
     # Calculate number of branches in each HUC
@@ -518,7 +533,7 @@ if __name__ == '__main__':
         help='Optional: The primary instance type for the run. If there are additional instance types '
         'not included in the PW_INSTANCE_TYPE_DICT, you will need to update it.',
         required=False,
-        default=None
+        default=None,
     )
 
     parser.add_argument(
@@ -530,10 +545,7 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '-o',
-        '--output-file',
-        help='Required: The path to an output geopackage',
-        required=True,
+        '-o', '--output-file', help='Required: The path to an output geopackage', required=True
     )
 
     parser.add_argument(
@@ -542,7 +554,7 @@ if __name__ == '__main__':
         help='Optional: Cost per GB per month',
         required=False,
         default=None,
-        type=float
+        type=float,
     )
 
     parser.add_argument(
@@ -551,16 +563,16 @@ if __name__ == '__main__':
         help='Optional: Cost per GB per month',
         required=False,
         default=None,
-        type=float
+        type=float,
     )
-    
+
     parser.add_argument(
         '-j',
         '--num-threads',
         help='Optional: Amount of threads to use for parallelizing reading log files',
         required=False,
         default=1,
-        type=int
+        type=int,
     )
 
     # Extract to dictionary and run

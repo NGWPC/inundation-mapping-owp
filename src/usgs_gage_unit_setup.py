@@ -21,7 +21,14 @@ warnings.simplefilter("ignore")
 
 class Gage2Branch(object):
     def __init__(
-        self, usgs_gage_filename, ras_locs_filename, ripple_locs_filename, ahps_filename, huc, huc_CRS, wbd_filename=None
+        self,
+        usgs_gage_filename,
+        ras_locs_filename,
+        ripple_locs_filename,
+        ahps_filename,
+        huc,
+        huc_CRS,
+        wbd_filename=None,
     ):
         self.usgs_gage_filename = usgs_gage_filename
         self.ras_locs_filename = ras_locs_filename
@@ -53,7 +60,7 @@ class Gage2Branch(object):
 
             # Convert ras locs crs to match usgs gage crs
             ras_locs.to_crs(huc_CRS, inplace=True)
-            
+
             ras_locs = ras_locs.rename(columns={'huc8': 'HUC8'})
 
             # Convert Multipoint geometry to Point geometry
@@ -64,7 +71,7 @@ class Gage2Branch(object):
 
         # Read ripple1d point locations (if available) and concat to usgs_gages dataframe.
         if os.path.exists(self.ripple_locs_filename):
-            
+
             ripple_columns = ['reach_id', f'huc{self.huc_level}', 'ras_xs_station', 'geom']
 
             # Read .parquet file using pandas
@@ -101,7 +108,7 @@ class Gage2Branch(object):
             # ripple1d reach_id is the same as feature_id, so rename it, and drop reach_id column
             ripple_locs_gdf['feature_id'] = ripple_locs_gdf['reach_id']
             ripple_locs_gdf = ripple_locs_gdf.drop(columns=['reach_id'])
-            
+
             # Rename huc_column to its uppercase as input to usgs_gage_crosswalk.py
             ripple_locs_gdf = ripple_locs_gdf.rename(columns={self.huc_column.lower(): self.huc_column})
 
@@ -112,7 +119,7 @@ class Gage2Branch(object):
             ripple_locs_gdf = pd.DataFrame(
                 columns=['feature_id', 'ras_xs_station', 'fid_xs', 'source', 'geometry', f'{self.huc_column}']
             )
-        
+
         # Concat USGS points with RAS2FIM points, and Ripple1d points
         gages_locs = pd.concat([usgs_gages, ras_locs, ripple_locs_gdf], axis=0, ignore_index=True)
         # gages_locs.to_crs(PREP_CRS, inplace=True)
@@ -201,10 +208,10 @@ class Gage2Branch(object):
         fim_inputs = pd.read_csv(
             fim_inputs_filename, header=None, names=['huc', 'levpa_id'], dtype={'huc': str, 'levpa_id': str}
         )
-        
+
         huc_level = len(fim_inputs['huc'].iloc[0])
         regex_pattern = rf'^\d{{{huc_level}}}$'
-        
+
         for huc_dir in [d for d in os.listdir(fim_dir) if re.search(regex_pattern, d)]:
             gage_file = os.path.join(fim_dir, huc_dir, 'usgs_subset_gages.gpkg')
             if not os.path.isfile(gage_file):
@@ -267,7 +274,13 @@ if __name__ == '__main__':
 
     if not filter_fim_inputs:
         usgs_gage_subset = Gage2Branch(
-            usgs_gages_filename, ras_locs_filename, ripple_locs_filename, nws_lid_filename, huc, huc_CRS, wbd_filename=wbd_filename
+            usgs_gages_filename,
+            ras_locs_filename,
+            ripple_locs_filename,
+            nws_lid_filename,
+            huc,
+            huc_CRS,
+            wbd_filename=wbd_filename,
         )
         if usgs_gage_subset.gages.empty:
             print(f'There are no gages identified for {huc}')

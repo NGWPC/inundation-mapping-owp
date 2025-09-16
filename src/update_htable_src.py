@@ -107,6 +107,7 @@ def process_branch(sub_branch_path, huc, branch):
     input_src_full.to_csv(src_full_file, index=False)
     input_hydro_table.to_csv(hydro_table_file, index=False)
 
+
 # TODO: May 16, 2025: add mp and glob to speed this way up
 def reset_hydro_and_src(fim_dir, huc_level):
     regex_pattern = rf'^\d{{{huc_level}}}$'
@@ -140,14 +141,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Update hydrotable and src files.')
     parser.add_argument('-d', '--fim_dir', help='Directory path for fim_pipeline output.', required=True)
-    parser.add_argument(
-        '-huc_level',
-        '--huc-level',
-        help='HUC level to use',
-        required=True,
-        type=int,
-    )
-    
+    parser.add_argument('-huc_level', '--huc-level', help='HUC level to use', required=True, type=int)
+
     args = vars(parser.parse_args())
     fim_dir = args['fim_dir']
     huc_level = args['huc_level']

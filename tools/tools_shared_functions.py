@@ -498,12 +498,8 @@ def get_stats_table_from_binary_rasters(
     candidate_ndv_mask = candidate_raster.data == candidate_raster.rio.nodata
     benchmark_ndv_mask = benchmark_raster.data == benchmark_raster.rio.nodata
 
-    candidate_raster.data = xr.where(
-        (~candidate_ndv_mask) & (candidate_raster >= 0), 1, candidate_raster
-    )
-    candidate_raster.data = xr.where(
-        (~candidate_ndv_mask) & (candidate_raster < 0), 0, candidate_raster
-    )
+    candidate_raster.data = xr.where((~candidate_ndv_mask) & (candidate_raster >= 0), 1, candidate_raster)
+    candidate_raster.data = xr.where((~candidate_ndv_mask) & (candidate_raster < 0), 0, candidate_raster)
 
     candidate_raster.data = xr.where(candidate_ndv_mask, 10, candidate_raster)
     candidate_raster.data = candidate_raster.data.astype('uint8')  # Convert dtype to uint8 # Change dtype
@@ -514,7 +510,7 @@ def get_stats_table_from_binary_rasters(
     benchmark_raster.rio.write_nodata(10, inplace=True)
 
     del candidate_ndv_mask, benchmark_ndv_mask
-    
+
     pairing_dictionary = {
         (0, 0): 0,
         (0, 1): 1,
@@ -567,14 +563,16 @@ def get_stats_table_from_binary_rasters(
     stats_table_dictionary = {}  # Initialize empty dictionary.
 
     c_aligned, b_aligned = candidate_raster.gval.homogenize(benchmark_raster, target_map="candidate")
-    candidate_raster.close(); benchmark_raster.close()
+    candidate_raster.close()
+    benchmark_raster.close()
     gc.collect()
 
     agreement_map = c_aligned.gval.compute_agreement_map(
         b_aligned, comparison_function='pairing_dict', pairing_dict=pairing_dictionary
     )
-    c_aligned.close(); b_aligned.close()
-    
+    c_aligned.close()
+    b_aligned.close()
+
     del candidate_raster, benchmark_raster
     gc.collect()
 
@@ -588,9 +586,7 @@ def get_stats_table_from_binary_rasters(
 
         # does drop introduce nan???
         # make nans 10
-        agreement_map.data = xr.where(
-            np.isnan(agreement_map.data), 10, agreement_map.data
-        )
+        agreement_map.data = xr.where(np.isnan(agreement_map.data), 10, agreement_map.data)
 
     gc.collect()
     crosstab_table = agreement_map.gval.compute_crosstab()
@@ -604,9 +600,9 @@ def get_stats_table_from_binary_rasters(
 
     # Only write the agreement raster if user-specified.
     if agreement_raster != None:
-        agreement_map.rio.write_nodata(10, encoded=True) \
-            .rio.to_raster(agreement_raster, dtype=np.uint8, driver="COG") # Write to uint8 instead of int32
-
+        agreement_map.rio.write_nodata(10, encoded=True).rio.to_raster(
+            agreement_raster, dtype=np.uint8, driver="COG"
+        )  # Write to uint8 instead of int32
 
         # Write legend text file
         legend_txt = os.path.join(os.path.split(agreement_raster)[0], 'read_me.txt')
@@ -672,7 +668,7 @@ def get_stats_table_from_binary_rasters(
                 agreement_map_include.data = xr.where(
                     np.isnan(agreement_map.data), 10, agreement_map_include.data
                 )
-                
+
                 gc.collect()
                 crosstab_table = agreement_map_include.gval.compute_crosstab()
                 gc.collect()
@@ -687,9 +683,10 @@ def get_stats_table_from_binary_rasters(
                     layer_agreement_raster = os.path.join(
                         os.path.split(agreement_raster)[0], poly_handle + '_agreement.tif'
                     )
-                   
-                    agreement_map_include.rio.write_nodata(10, encoded=True) \
-                        .rio.to_raster(layer_agreement_raster, dtype=np.int32, driver="COG")
+
+                    agreement_map_include.rio.write_nodata(10, encoded=True).rio.to_raster(
+                        layer_agreement_raster, dtype=np.int32, driver="COG"
+                    )
 
                 # Update stats table dictionary
                 stats_table_dictionary.update(
@@ -701,7 +698,7 @@ def get_stats_table_from_binary_rasters(
                         )
                     }
                 )
-                
+
                 agreement_map_include.close()
 
                 del poly_all, poly_all_proj, metrics_table, crosstab_table

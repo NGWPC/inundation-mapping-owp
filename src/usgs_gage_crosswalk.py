@@ -141,7 +141,7 @@ class GageCrosswalk(object):
 
         # filter for ras2fim entries (note that source column includes suffix with version number)
         ras_elev_table = elev_table[elev_table['source'].str.contains('ras2fim')]
-        
+
         ras_elev_table = ras_elev_table[
             [
                 "location_id",

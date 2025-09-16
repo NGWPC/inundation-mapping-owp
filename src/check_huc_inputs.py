@@ -20,7 +20,7 @@ def __read_included_files(parent_dir_path, huc_level):
             accepted_hucs_set = {fl.rstrip() for fl in f.readlines()}
     else:
         raise Exception(f"Included huc list unavailable: {filename_pattern}.")
-        
+
     return accepted_hucs_set
 
 
@@ -36,14 +36,16 @@ def __read_input_hucs(hucs):
             raise ValueError(f"Incoming file must be in .lst format, got '{source_file_extension}' instead.")
 
         if not os.path.isfile(first_item):
-            raise FileNotFoundError(f"File not found: {first_item}, verify huc list and/or check docker mounts.")
+            raise FileNotFoundError(
+                f"File not found: {first_item}, verify huc list and/or check docker mounts."
+            )
 
         with open(first_item, "r") as hucs_file:
             file_lines = hucs_file.readlines()
             f_list = [__clean_huc_value(fl) for fl in file_lines]
             huc_list.update(f_list)
 
-    # Case 2: A single HUC or HUCs in quotes 
+    # Case 2: A single HUC or HUCs in quotes
     else:
         for huc in hucs:
             huc_list.add(__clean_huc_value(huc))
@@ -81,7 +83,7 @@ def check_hucs(hucs, inputsDir):
         huc_lens = {len(huc) for huc in hucs}
         if len(huc_lens) != 1:
             raise ValueError("All HUCs must be the same length")
-        
+
         return huc_lens.pop()
 
     list_hucs = __read_input_hucs(hucs)
@@ -94,9 +96,8 @@ def check_hucs(hucs, inputsDir):
 
     huc_list_path = os.path.join(inputsDir, 'huc_lists')
     accepted_hucs = __read_included_files(huc_list_path, list_hucs_level)
-    
-    accepted_hucs_level = get_huc_level(accepted_hucs)
 
+    accepted_hucs_level = get_huc_level(accepted_hucs)
 
     if accepted_hucs_level != list_hucs_level:
         raise ValueError(

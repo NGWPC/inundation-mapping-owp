@@ -47,7 +47,9 @@ Outputs
 '''
 
 
-def create_ripple1d_rating_database(huc_ripple1d_input_file, ripple1d_elev_df, nwm_recurr_filepath, log_dir, huc_level):
+def create_ripple1d_rating_database(
+    huc_ripple1d_input_file, ripple1d_elev_df, nwm_recurr_filepath, log_dir, huc_level
+):
     start_time = dt.datetime.now()
     print('Reading ripple1d rating curves from parquet...')
     log_text = 'Processing database for ripple1d flow/WSE at NWM flow recur intervals...\n'
@@ -75,10 +77,11 @@ def create_ripple1d_rating_database(huc_ripple1d_input_file, ripple1d_elev_df, n
     start_time = dt.datetime.now()
 
     cross_df = ripple1d_elev_df[
-            ["location_id", "HydroID", "feature_id", "levpa_id", f"HUC{huc_level}", "dem_adj_elevation", "source"]
+        ["location_id", "HydroID", "feature_id", "levpa_id", f"HUC{huc_level}", "dem_adj_elevation", "source"]
     ].copy()
     cross_df.rename(
-        columns={'dem_adj_elevation': 'hand_datum', 'HydroID': 'hydroid', f'HUC{huc_level}': 'huc'}, inplace=True
+        columns={'dem_adj_elevation': 'hand_datum', 'HydroID': 'hydroid', f'HUC{huc_level}': 'huc'},
+        inplace=True,
     )
 
     # filter null location_id rows from cross_df
@@ -309,7 +312,13 @@ def branch_proc_list(ripple1d_df, huc_run_dir, debug_outputs_option, log_file):
 
 
 def run_prep(
-    run_dir, ripple_input_dir, ripple_rc_filepath, nwm_recurr_filepath, huc_level, debug_outputs_option, job_number
+    run_dir,
+    ripple_input_dir,
+    ripple_rc_filepath,
+    nwm_recurr_filepath,
+    huc_level,
+    debug_outputs_option,
+    job_number,
 ):
     ## Check input args are valid
     assert os.path.isdir(run_dir), 'ERROR: could not find the input fim_dir location: ' + str(run_dir)
@@ -433,12 +442,7 @@ if __name__ == '__main__':
         help='Path to NWM recur file (multiple NWM flow intervals). NOTE: assumes flow units are cfs!!',
         required=True,
     )
-    parser.add_argument(
-        '-huc_level',
-        '--huc-level',
-        help='HUC level to use',
-        required=True,
-    )
+    parser.add_argument('-huc_level', '--huc-level', help='HUC level to use', required=True)
 
     parser.add_argument(
         '-debug',
@@ -449,7 +453,6 @@ if __name__ == '__main__':
         action='store_true',
     )
     parser.add_argument('-j', '--job-number', help='Number of jobs to use', required=False, default=1)
-
 
     ## Assign variables from arguments.
     args = vars(parser.parse_args())
@@ -463,5 +466,11 @@ if __name__ == '__main__':
 
     ## Prepare/check inputs, create log file, and spin up the proc list
     run_prep(
-        run_dir, ripple_input_dir, ripple_rc_filepath, nwm_recurr_filepath, huc_level, debug_outputs_option, job_number
+        run_dir,
+        ripple_input_dir,
+        ripple_rc_filepath,
+        nwm_recurr_filepath,
+        huc_level,
+        debug_outputs_option,
+        job_number,
     )

@@ -99,27 +99,28 @@ def process_points(args):
 
     ## Use point geometry to determine HAND raster pixel values.
     with rasterio.open(hand_path) as hand_src, rasterio.open(catchments_path) as catchments_src:
-    ## OWP Version - merge v4.8.7.3
-    #     water_edge_df['hand'] = [np.float32(h[0]) / 1000 for h in hand_src.sample(coords)]
-    #     hydroids = []
-    #
-    #     for c in catchments_src.sample(coords):
-    #         hid = int_hid_prefix * -1 + c[0] if c[0] < 0 else int_hid_prefix + c[0]
-    #         hydroids.append(hid)
-    # water_edge_df['hydroid'] = hydroids
+        ## OWP Version - merge v4.8.7.3
+        #     water_edge_df['hand'] = [np.float32(h[0]) / 1000 for h in hand_src.sample(coords)]
+        #     hydroids = []
+        #
+        #     for c in catchments_src.sample(coords):
+        #         hid = int_hid_prefix * -1 + c[0] if c[0] < 0 else int_hid_prefix + c[0]
+        #         hydroids.append(hid)
+        # water_edge_df['hydroid'] = hydroids
 
         ## NGWPC Version - merge v4.8.7.3
         raw_hand_vals = [h[0] for h in hand_src.sample(coords)]
         hydroid_vals = [c[0] for c in catchments_src.sample(coords)]
-    
+
     # Assign to dataframe
     water_edge_df['hydroid'] = hydroid_vals
-
 
     # If usgs_usgs_hwm is True, and if the height_above_gnd column exists, adjust HAND values
     if use_usgs_hwm and 'height_above_gnd' in water_edge_df.columns:
         # Assume null values are the actual water edge, so fill them with 0.
-        water_edge_df['height_above_gnd'] = pd.to_numeric(water_edge_df['height_above_gnd'], errors='coerce').fillna(0)
+        water_edge_df['height_above_gnd'] = pd.to_numeric(
+            water_edge_df['height_above_gnd'], errors='coerce'
+        ).fillna(0)
         adjusted_hand = []
         for hand, height_above_gnd in zip(raw_hand_vals, water_edge_df['height_above_gnd']):
             height_above_gnd = height_above_gnd * 0.3048  # ft to m
@@ -148,9 +149,8 @@ def process_points(args):
 
     if use_usgs_hwm:
         # Reassign 'submitter' values to reflect all submitters for each hydroid
-        submitter_labels = (
-            water_edge_df.groupby('hydroid')['submitter']
-            .apply(lambda s: ', '.join(sorted(set(s))) if 'usgs_hwm' in s.values else s.iloc[0])
+        submitter_labels = water_edge_df.groupby('hydroid')['submitter'].apply(
+            lambda s: ', '.join(sorted(set(s))) if 'usgs_hwm' in s.values else s.iloc[0]
         )
 
         # Map the combined label back to each row by hydroid
@@ -162,7 +162,9 @@ def process_points(args):
         # Identify hydroids with ONLY 'usgs_hwm' as submitter
         # These are dropped so as to not bias RCs to high end
         hydroids_to_drop = submitter_sets[submitter_sets == {'usgs_hwm'}].index
-        water_edge_df = water_edge_df[~water_edge_df['hydroid'].isin(hydroids_to_drop)]  # Drop all rows with those hydroids
+        water_edge_df = water_edge_df[
+            ~water_edge_df['hydroid'].isin(hydroids_to_drop)
+        ]  # Drop all rows with those hydroids
 
     ## Check that there are valid obs in the water_edge_df (not empty)
     if water_edge_df.empty:
@@ -266,8 +268,9 @@ def find_points_in_huc(huc_id, use_usgs_hwm, log_file):
             else:
                 log_file.write(f"No USGS HWM file found for {huc_id} — skipping.\n")
         else:
-            log_file.write("Environment variable 'input_calib_points_usgs_hwm_dir' not set — skipping USGS merge.\n")
-
+            log_file.write(
+                "Environment variable 'input_calib_points_usgs_hwm_dir' not set — skipping USGS merge.\n"
+            )
 
     # Read WBD geometry as a full GeoDataFrame (retaining CRS)
     wbd_gdf = gpd.read_file(os.path.join(fim_directory, huc_id, 'wbd.gpkg'))
@@ -277,7 +280,9 @@ def find_points_in_huc(huc_id, use_usgs_hwm, log_file):
         wbd_gdf = wbd_gdf.to_crs(water_edge_df.crs)
 
     # Intersect
-    water_edge_df = water_edge_df[water_edge_df.intersects(wbd_gdf.geometry.union_all())].reset_index(drop=True)
+    water_edge_df = water_edge_df[water_edge_df.intersects(wbd_gdf.geometry.union_all())].reset_index(
+        drop=True
+    )
 
     return water_edge_df
 
@@ -300,15 +305,12 @@ def find_hucs_with_points(points_file_dir, fim_out_huc_list):
     # make sets
     hucs_in_points_file_dir_set = set(hucs_in_points_file_dir)
     fim_out_huc_list_huc8s_set = set([f[:8] for f in fim_out_huc_list])
-    
+
     # Use set operations to only keep hucs in both the points_file_dir & fim_out_huc_list
     fim_out_huc_list_with_points = hucs_in_points_file_dir_set & fim_out_huc_list_huc8s_set
 
     # Get the list of fim_out_huc_list that have points
-    hucs_wpoints = [
-        f for f in fim_out_huc_list
-        if f[:8] in fim_out_huc_list_with_points
-    ]
+    hucs_wpoints = [f for f in fim_out_huc_list if f[:8] in fim_out_huc_list_with_points]
 
     return hucs_wpoints
 
@@ -376,7 +378,7 @@ def ingest_points_layer(fim_directory, job_number, debug_outputs_option, log_fil
     # Initialize process list for multiprocessing.
     procs_list = []
 
-    #huc_list = ['07080205'] # Uncomment for testing
+    # huc_list = ['07080205'] # Uncomment for testing
     # Sort huc_list for helping track progress in future print statments
     huc_list.sort()
     ## Define paths to relevant HUC HAND data.
@@ -483,7 +485,7 @@ def ingest_points_layer(fim_directory, job_number, debug_outputs_option, log_fil
                         htable_path,
                         debug_outputs_option,
                         hydroid_prefix_path,
-                        use_usgs_hwm
+                        use_usgs_hwm,
                     ]
                 )
 
@@ -504,7 +506,9 @@ def ingest_points_layer(fim_directory, job_number, debug_outputs_option, log_fil
     log_file.write('#########################################################\n')
 
 
-def run_prep(fim_directory, debug_outputs_option, ds_thresh_override, DOWNSTREAM_THRESHOLD, job_number, usgs_hwm):
+def run_prep(
+    fim_directory, debug_outputs_option, ds_thresh_override, DOWNSTREAM_THRESHOLD, job_number, usgs_hwm
+):
     '''
     Main function to call the processing functions defined above, with validation, logging, and timing
 
@@ -608,7 +612,7 @@ if __name__ == '__main__':
         help='OPTIONAL: Use if USGS High Water Mark data are desired to supplement spatial obs.',
         default=False,
         required=False,
-        action="store_true"
+        action="store_true",
     )
 
     ## Assign variables from arguments.
@@ -619,4 +623,11 @@ if __name__ == '__main__':
     job_number = args['job_number']
     use_usgs_hwm = args['use_usgs_hwm']
 
-    run_prep(fim_directory, debug_outputs_option, ds_thresh_override, DOWNSTREAM_THRESHOLD, job_number, use_usgs_hwm)
+    run_prep(
+        fim_directory,
+        debug_outputs_option,
+        ds_thresh_override,
+        DOWNSTREAM_THRESHOLD,
+        job_number,
+        use_usgs_hwm,
+    )

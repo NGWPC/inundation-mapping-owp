@@ -49,7 +49,7 @@ def agreedem(
     '''
     # Set wbt envs
     wbt = whitebox.WhiteboxTools()
-    wbt.set_whitebox_dir(os.environ.get("WBT_PATH")) # need to set path prior to setting verbose mode
+    wbt.set_whitebox_dir(os.environ.get("WBT_PATH"))  # need to set path prior to setting verbose mode
     wbt.set_verbose_mode(False)
 
     # ------------------------------------------------------------------
@@ -170,7 +170,9 @@ def agreedem(
                 bin_buf_output_profile.update(dtype='float32')
 
                 with rasterio.Env(GDAL_CACHEMAX=36000000000, GDAL_NUM_THREADS=4):
-                    with rasterio.open(bin_buf_output, 'w', **bin_buf_output_profile, BIGTIFF='YES') as raster:
+                    with rasterio.open(
+                        bin_buf_output, 'w', **bin_buf_output_profile, BIGTIFF='YES'
+                    ) as raster:
                         for ji, window in agree_bufgrid.block_windows(1):
                             # read distance, allocation, and elevation datasets
                             agree_bufgrid_data_window = agree_bufgrid.read(1, window=window)

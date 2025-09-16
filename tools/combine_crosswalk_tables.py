@@ -37,7 +37,12 @@ def combine_crosswalk_tables(data_directory, output_filename):
         huc_level = len(df['HUC'].iloc[0])
 
         df = df.rename(
-            columns={'HUC': f'huc{huc_level}', 'HydroID': 'hydro_id', 'LakeID': 'lake_id', 'BranchID': 'branch_id'}
+            columns={
+                'HUC': f'huc{huc_level}',
+                'HydroID': 'hydro_id',
+                'LakeID': 'lake_id',
+                'BranchID': 'branch_id',
+            }
         )
 
         df = df.sort_values(by=['feature_id', f'huc{huc_level}', 'branch_id', 'hydro_id'])

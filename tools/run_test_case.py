@@ -390,7 +390,7 @@ class Test_Case(Benchmark):
 
         # Create contingency rasters and stats
         fh.vprint("Begin creating contingency rasters and stats", verbose)
-        if os.path.isfile(predicted_raster_path):            
+        if os.path.isfile(predicted_raster_path):
             gc.collect()
             compute_contingency_stats_from_rasters(
                 predicted_raster_path,

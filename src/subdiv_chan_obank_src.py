@@ -382,7 +382,14 @@ def multi_process(variable_mannings_calc, procs_list, log_file, number_of_jobs, 
 
 
 def run_prep(
-    fim_dir, mann_n_table, huc_level, output_suffix, number_of_jobs, verbose, src_plot_option, process_huc=None
+    fim_dir,
+    mann_n_table,
+    huc_level,
+    output_suffix,
+    number_of_jobs,
+    verbose,
+    src_plot_option,
+    process_huc=None,
 ):
     procs_list = []
 
@@ -496,13 +503,7 @@ if __name__ == '__main__':
         required=True,
         type=str,
     )
-    parser.add_argument(
-        '-huc_level',
-        '--huc-level',
-        help='HUC level to use',
-        required=True,
-        type=int,
-    )
+    parser.add_argument('-huc_level', '--huc-level', help='HUC level to use', required=True, type=int)
     parser.add_argument(
         '-suff',
         '--output-suffix',

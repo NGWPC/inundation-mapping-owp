@@ -133,24 +133,24 @@ def process_bridges_in_huc(
         hand_grid_profile = hand_grid.profile
         hand_grid_array = hand_grid.read(1)
 
-    ## Below is commented to enable HLP pre clip data before v4.8.7.3 merge
+        ## Below is commented to enable HLP pre clip data before v4.8.7.3 merge
 
-    # first process the osm bridges without reliable lidar data using previous method
-    # non_lidar_osm_gdf, hand_grid_array = process_non_lidar_osm(
-    #     osm_gdf, hand_grid_array, hand_grid_profile, non_lidar_buffer
-    # )
-    # lidar_osm_gdf, updated_hand_grid_array = process_lidar_osm(
-    #     osm_gdf, hand_grid_array, hand_grid_profile, lidar_buffer, bridge_elev_diff_raster
-    # )
+        # first process the osm bridges without reliable lidar data using previous method
+        # non_lidar_osm_gdf, hand_grid_array = process_non_lidar_osm(
+        #     osm_gdf, hand_grid_array, hand_grid_profile, non_lidar_buffer
+        # )
+        # lidar_osm_gdf, updated_hand_grid_array = process_lidar_osm(
+        #     osm_gdf, hand_grid_array, hand_grid_profile, lidar_buffer, bridge_elev_diff_raster
+        # )
 
-    # either of non_lidar_osm_gdf or lidar_osm_gdf can be None (if there are no lidar or non-lidar bridges)-- so handle it
-    # valid_osm_gdfs = [gdf for gdf in [non_lidar_osm_gdf, lidar_osm_gdf] if gdf is not None]
+        # either of non_lidar_osm_gdf or lidar_osm_gdf can be None (if there are no lidar or non-lidar bridges)-- so handle it
+        # valid_osm_gdfs = [gdf for gdf in [non_lidar_osm_gdf, lidar_osm_gdf] if gdf is not None]
 
-    # osm_gdf = pd.concat(valid_osm_gdfs, ignore_index=True)
+        # osm_gdf = pd.concat(valid_osm_gdfs, ignore_index=True)
 
-    ## Below is pre v4.8.7.3 merge version which works with old HLP pre clip osm_bridges_subset.gpkg files,
-    ## which do not contain the new 'has_lidar_tif' column
-        
+        ## Below is pre v4.8.7.3 merge version which works with old HLP pre clip osm_bridges_subset.gpkg files,
+        ## which do not contain the new 'has_lidar_tif' column
+
         # Get max hand values for each bridge
         osm_gdf['max_hand'] = zonal_stats(
             osm_gdf['geometry'], hand_grid_array, affine=hand_grid.transform, stats="max", nodata=-999
@@ -236,7 +236,7 @@ def flows_from_hydrotable(bridge_pnts, hydroTable):
     # bridge_pnts['threshold_hand_75_ft'] = bridge_pnts['threshold_hand_75'] * 3.28084
     # bridge_pnts['threshold_discharge_cfs'] = bridge_pnts['threshold_discharge'] * 35.3147
     # bridge_pnts['threshold_discharge_75_cfs'] = bridge_pnts['threshold_discharge75'] * 35.3147
-    
+
     ## Below is pre v4.8.7.3 merge version
     bridge_pnts[['max_discharge', 'max_discharge75']] = bridge_pnts.apply(
         lambda row: flow_lookup((row.max_hand, row.max_hand_75), row.HydroID, hydroTable),
@@ -248,7 +248,7 @@ def flows_from_hydrotable(bridge_pnts, hydroTable):
     bridge_pnts['max_hand_75_ft'] = bridge_pnts['max_hand_75'] * 3.28084
     bridge_pnts['max_discharge_cfs'] = bridge_pnts['max_discharge'] * 35.3147
     bridge_pnts['max_discharge_75_cfs'] = bridge_pnts['max_discharge75'] * 35.3147
-    
+
     return bridge_pnts
 
 

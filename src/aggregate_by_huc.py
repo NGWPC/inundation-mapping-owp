@@ -638,13 +638,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Aggregates usgs_elev_table.csv at the HUC level')
     parser.add_argument('-fim', '--fim_directory', help='Input FIM Directory', required=True)
-    parser.add_argument(
-        '-huc_level',
-        '--huc-level',
-        help='HUC level to use',
-        required=True,
-        type=int,
-    )
+    parser.add_argument('-huc_level', '--huc-level', help='HUC level to use', required=True, type=int)
     parser.add_argument('-i', '--fim_inputs', help='Input fim_inputs CSV file', required=False)
     parser.add_argument(
         '-elev',

@@ -437,21 +437,23 @@ def add_crosswalk(
 
     if output_hydro_table.HydroID.dtype != 'str':
         output_hydro_table.HydroID = output_hydro_table.HydroID.astype(str)
-    
+
     ## NGWPC Version - merge v4.8.7.3
     ## Since there are order of magnitude differences in the number of HUCs across the various levels (8, 10, 12),
     ##      picking out the FIM ID’s from HydroID’s is HUC level dependent.
     output_hydro_table[FIM_ID] = output_hydro_table.loc[:, 'HydroID'].apply(lambda x: str(x)[:max_FIM_ID_len])
-    
+
     ## # OWP Version - merge v4.8.7.3
     # TODO: Jun 2025: Why do we have this column? Likely a bug
     # output_hydro_table['HydroID Int16'] = output_hydro_table['HydroID'].apply(lambda x: str(int(x[4:])))
     # output_hydro_table[FIM_ID] = output_hydro_table.loc[:, 'HydroID'].apply(lambda x: str(x)[0:4])
 
-    output_hydro_table = output_hydro_table.merge(input_huc.loc[:, [FIM_ID, huc_column_name]], how='left', on=FIM_ID)
+    output_hydro_table = output_hydro_table.merge(
+        input_huc.loc[:, [FIM_ID, huc_column_name]], how='left', on=FIM_ID
+    )
 
     del input_huc
-    
+
     if output_flows.HydroID.dtype != 'str':
         output_flows.HydroID = output_flows.HydroID.astype(str)
     output_hydro_table = output_hydro_table.merge(

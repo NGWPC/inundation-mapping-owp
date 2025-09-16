@@ -357,8 +357,7 @@ def huc_level_clip_vectors_to_wbd(huc, outputs_dir):
 
         # TODO: hardcoded for now, needs to be input_WBD_filename originally
         input_WBD_filename = os.path.join(
-            inputsDir, 'wbd',
-            f'WBD_National_EPSG_5070_WBDHU{hucUnitLength}_clip_dem_domain.gpkg'
+            inputsDir, 'wbd', f'WBD_National_EPSG_5070_WBDHU{hucUnitLength}_clip_dem_domain.gpkg'
         )
 
         # TODO: Use Python API (osgeo.ogr) instead of using ogr2ogr executable
@@ -544,8 +543,10 @@ if __name__ == '__main__':
         '<year_month_day_hucLevel> (i.e. September 26, 2023 @ HUC8 would be 23_09_26_huc8)',
         required=True,
     )
-    
-    parser.add_argument('-u', '--huc_list', help='List of HUCs to genereate pre-clipped vectors for.', required=True)
+
+    parser.add_argument(
+        '-u', '--huc_list', help='List of HUCs to genereate pre-clipped vectors for.', required=True
+    )
 
     parser.add_argument(
         '-j',

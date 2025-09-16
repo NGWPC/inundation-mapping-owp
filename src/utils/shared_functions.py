@@ -310,7 +310,12 @@ def concat_huc_csv(fim_dir, huc_level, csv_name):
                 # Aggregate all of the individual huc elev_tables into one for accessing all data in one csv
                 read_csv = pd.read_csv(
                     csv_file,
-                    dtype={f'HUC{huc_level}': object, 'location_id': object, 'feature_id': int, 'levpa_id': object},
+                    dtype={
+                        f'HUC{huc_level}': object,
+                        'location_id': object,
+                        'feature_id': int,
+                        'levpa_id': object,
+                    },
                 )
                 # Add huc field to dataframe
                 read_csv[f'HUC{huc_level}'] = huc

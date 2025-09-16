@@ -378,13 +378,7 @@ if __name__ == '__main__':
         required=True,
         type=str,
     )
-    parser.add_argument(
-        '-huc_level',
-        '--huc-level',
-        help='HUC level to use',
-        required=True,
-        type=int,
-    )
+    parser.add_argument('-huc_level', '--huc-level', help='HUC level to use', required=True, type=int)
     parser.add_argument(
         '-j',
         '--number-of-jobs',

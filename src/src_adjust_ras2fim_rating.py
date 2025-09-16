@@ -346,9 +346,7 @@ def run_prep(run_dir, ras_input_dir, ras_rc_filepath, nwm_recurr_filepath, debug
         ## Create an aggregate dataframe with all ras_elev_table.csv entries for hucs in fim_dir
         print(f'Reading RAS2FIM point loc HAND elevation from {huc} ras_elev_table csv files...')
         # ras_elev_df = concat_huc_csv(huc_run_dir, 8, csv_elev)
-        csv_elev = (
-            'ras_elev_table.csv'  # file name to search ras2fim location data (in the huc/branch dirs)
-        )
+        csv_elev = 'ras_elev_table.csv'  # file name to search ras2fim location data (in the huc/branch dirs)
         ras_elev_df = pd.read_csv(
             os.path.join(huc_run_dir, csv_elev),
             dtype={'HUC8': object, 'location_id': object, 'feature_id': int, 'levpa_id': object},

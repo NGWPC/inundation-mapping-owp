@@ -26,29 +26,29 @@ from utils.shared_variables import DEFAULT_FIM_PROJECTION_CRS
 
 INPUT_DIR = os.environ.get('inputsDir')
 
-WBD_FILE_PATH = os.path.join(INPUT_DIR, "wbd","WBD_National_EPSG_5070_WBDHU8_clip_dem_domain.gpkg")
-HUC_LIST_DIR = os.path.join(INPUT_DIR,"huc_lists")
-HUC_LIST = os.path.join(HUC_LIST_DIR,"ngwpc_PI1_lidar_huc8.lst")
+WBD_FILE_PATH = os.path.join(INPUT_DIR, "wbd", "WBD_National_EPSG_5070_WBDHU8_clip_dem_domain.gpkg")
+HUC_LIST_DIR = os.path.join(INPUT_DIR, "huc_lists")
+HUC_LIST = os.path.join(HUC_LIST_DIR, "ngwpc_PI1_lidar_huc8.lst")
 
 
 def Acquire_city_boundaries_and_convert_city_names_to_HUCs(
-    source : str,
+    source: str,
     cities: Iterable[str] | str | Path,
-    wbd : str | Path | gpd.GeoDataFrame = WBD_FILE_PATH,
-    huc_level : int | str = 8,
-    year : str = "2020",
-    target_crs : str | int | CRS = DEFAULT_FIM_PROJECTION_CRS,
-    city_name_field : str = "NAME",
-    predicate : str = "intersects",
-    additional_hucs : Iterable[str] | str | Path | None = None,
-    drop_hucs : Iterable[str] | str | Path | None = None,
-    wbd_write_path : str | Path | None = None,
-    wbd_write_kwargs : dict | None = None,
-    huc_list_write_path : str | Path | None = HUC_LIST
+    wbd: str | Path | gpd.GeoDataFrame = WBD_FILE_PATH,
+    huc_level: int | str = 8,
+    year: str = "2020",
+    target_crs: str | int | CRS = DEFAULT_FIM_PROJECTION_CRS,
+    city_name_field: str = "NAME",
+    predicate: str = "intersects",
+    additional_hucs: Iterable[str] | str | Path | None = None,
+    drop_hucs: Iterable[str] | str | Path | None = None,
+    wbd_write_path: str | Path | None = None,
+    wbd_write_kwargs: dict | None = None,
+    huc_list_write_path: str | Path | None = HUC_LIST,
 ) -> Tuple[gpd.GeoDataFrame, list]:
     """
     Acquires US Census TIGERweb data and converts city names to HUCs list.
-    
+
     Returns a GeoDataFrame of the WBDs and a list of HUCs. Also, optionally writes the WBDs and HUC list to file.
 
     Parameters
@@ -79,7 +79,7 @@ def Acquire_city_boundaries_and_convert_city_names_to_HUCs(
         Keyword arguments to pass to GeoDataFrame.to_file(). Only used if write_path is not None.
     huc_list_write_path : str or Path or None, default = HUC_LIST
         The path to write the HUC8 list to.
-        
+
     Returns
     -------
     gpd.GeoDataFrame
@@ -105,7 +105,9 @@ def Acquire_city_boundaries_and_convert_city_names_to_HUCs(
     # get the cities list
     try:
         # reads the file successfully if cities is a str or Path, note that the file is city, state format
-        cities_list = pd.read_fwf(cities, header=None, lineterminator='\n', index_col=False, comment='#')[0].to_list()
+        cities_list = pd.read_fwf(cities, header=None, lineterminator='\n', index_col=False, comment='#')[
+            0
+        ].to_list()
     except FileNotFoundError:
         if isinstance(cities, str) | isinstance(cities, Path):
             cities_list = [cities]
@@ -113,11 +115,13 @@ def Acquire_city_boundaries_and_convert_city_names_to_HUCs(
             cities_list = cities
 
     # get census_boundaries for the cities
-    census_boundaries = census_boundaries[census_boundaries[city_name_field].isin(cities_list)].reset_index(drop=True)
+    census_boundaries = census_boundaries[census_boundaries[city_name_field].isin(cities_list)].reset_index(
+        drop=True
+    )
 
     # get the HUC level layer name
     layer_name = f"WBDHU{huc_level}"
-                
+
     # get the wbd data
     if isinstance(wbd, str) or isinstance(wbd, Path):
         wbd = gpd.read_file(wbd, layer=layer_name)
@@ -131,8 +135,7 @@ def Acquire_city_boundaries_and_convert_city_names_to_HUCs(
 
     # use spatial join to create huc list
     huc_list = (
-        wbd
-        .sjoin(census_boundaries, how="inner", predicate=predicate)
+        wbd.sjoin(census_boundaries, how="inner", predicate=predicate)
         .loc[:, huc_field_name]
         .drop_duplicates()
         .reset_index(drop=True)
@@ -173,18 +176,14 @@ def Acquire_city_boundaries_and_convert_city_names_to_HUCs(
         huc_list = list(set(huc_list) - set(drop_hucs))
 
     # remove duplicated HUCs
-    wbd_subset = (
-        wbd
-        .loc[wbd[huc_field_name].isin(huc_list)]
-        .reset_index(drop=True)
-    )
+    wbd_subset = wbd.loc[wbd[huc_field_name].isin(huc_list)].reset_index(drop=True)
 
     # write wbd_subset to file
     if wbd_write_path:
         if wbd_write_kwargs is None:
             wbd_write_kwargs = {}
         wbd_subset.to_file(wbd_write_path, **wbd_write_kwargs)
-    
+
     # write huc_list to file
     if huc_list_write_path:
         pd.Series(huc_list).to_csv(huc_list_write_path, sep='\n', header=False, index=False)
@@ -202,7 +201,7 @@ if __name__ == "__main__":
         type=str,
         required=True,
         help="The source of the data. Options are 'CBSA', 'CSA', 'MD', 'UA_C'.",
-        choices=["CBSA", "CSA", "MD", "UA_C"]
+        choices=["CBSA", "CSA", "MD", "UA_C"],
     )
 
     parser.add_argument(
@@ -210,7 +209,7 @@ if __name__ == "__main__":
         "-c",
         type=str,
         required=True,
-        help="The cities to convert to HUCs. Can be an iterable of city names, a path to a line-deliminted text file with city names, or a single city name."
+        help="The cities to convert to HUCs. Can be an iterable of city names, a path to a line-deliminted text file with city names, or a single city name.",
     )
 
     parser.add_argument(
@@ -219,7 +218,7 @@ if __name__ == "__main__":
         type=str,
         required=False,
         default=WBD_FILE_PATH,
-        help="The path to the WBD vector file."
+        help="The path to the WBD vector file.",
     )
 
     parser.add_argument(
@@ -229,16 +228,11 @@ if __name__ == "__main__":
         required=False,
         default=8,
         help="The HUC level to use. Options are 8.",
-        choices=[8]
+        choices=[8],
     )
 
     parser.add_argument(
-        "--year",
-        "-y",
-        type=str,
-        required=False,
-        default="2020",
-        help="The year of the data."
+        "--year", "-y", type=str, required=False, default="2020", help="The year of the data."
     )
 
     parser.add_argument(
@@ -247,7 +241,7 @@ if __name__ == "__main__":
         type=str,
         required=False,
         default=DEFAULT_FIM_PROJECTION_CRS,
-        help="The target coordinate reference system. Exclude to not reproject the data."
+        help="The target coordinate reference system. Exclude to not reproject the data.",
     )
 
     parser.add_argument(
@@ -256,7 +250,7 @@ if __name__ == "__main__":
         type=str,
         required=False,
         default="NAME",
-        help="The name of the field in GeoDataFrame that contains the city names."
+        help="The name of the field in GeoDataFrame that contains the city names.",
     )
 
     parser.add_argument(
@@ -266,16 +260,27 @@ if __name__ == "__main__":
         required=False,
         default="intersects",
         help="The spatial predicate to use to get the geometry of the city. Options are in geopandas.sindex.valid_query_parameters and listed here as 'overlaps', 'covers', 'covered_by', 'contains_properly', 'touches', 'intersects', 'contains', 'crosses', None, and 'within'",
-        choices=['overlaps', 'covers', 'covered_by', 'contains_properly', 'touches', 'intersects', 'contains', 'crosses', None, 'within']
+        choices=[
+            'overlaps',
+            'covers',
+            'covered_by',
+            'contains_properly',
+            'touches',
+            'intersects',
+            'contains',
+            'crosses',
+            None,
+            'within',
+        ],
     )
-    
+
     parser.add_argument(
         "--additional_hucs",
         "-a",
         type=str,
         required=False,
         default=None,
-        help="The additional HUCs to add to the HUC list. Can be a path to a line-deliminted text file with HUC names or a single HUC name."
+        help="The additional HUCs to add to the HUC list. Can be a path to a line-deliminted text file with HUC names or a single HUC name.",
     )
 
     parser.add_argument(
@@ -284,7 +289,7 @@ if __name__ == "__main__":
         type=str,
         required=False,
         default=None,
-        help="The HUCs to drop from the HUC list. Can be a path to a line-deliminted text file with HUC names or a single HUC name."
+        help="The HUCs to drop from the HUC list. Can be a path to a line-deliminted text file with HUC names or a single HUC name.",
     )
 
     parser.add_argument(
@@ -293,7 +298,7 @@ if __name__ == "__main__":
         type=str,
         required=False,
         default=None,
-        help="The path to write the WBD data to."
+        help="The path to write the WBD data to.",
     )
 
     parser.add_argument(
@@ -302,18 +307,13 @@ if __name__ == "__main__":
         type=json.loads,
         required=False,
         default=None,
-        help="Keyword arguments to pass to GeoDataFrame.to_file(). Only used if write_path is not None."
+        help="Keyword arguments to pass to GeoDataFrame.to_file(). Only used if write_path is not None.",
     )
 
     parser.add_argument(
-        "--huc_list_write_path",
-        "-hw",
-        type=str,
-        required=False,
-        help="The path to write the HUC8 list to."
+        "--huc_list_write_path", "-hw", type=str, required=False, help="The path to write the HUC8 list to."
     )
 
     kwargs = vars(parser.parse_args())
 
     wbd, huc_list = Acquire_city_boundaries_and_convert_city_names_to_HUCs(**kwargs)
-    

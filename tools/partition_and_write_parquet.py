@@ -7,7 +7,7 @@ import pandas as pd
 from tqdm import tqdm
 
 
-def load_dataframe_by_variable_huc_level(input_file:Path, huc:str, column_name:str):
+def load_dataframe_by_variable_huc_level(input_file: Path, huc: str, column_name: str):
 
     all_data = pd.read_parquet(input_file)
     valid_values = all_data.dropna(subset=['huc12'])
@@ -19,13 +19,10 @@ def load_dataframe_by_variable_huc_level(input_file:Path, huc:str, column_name:s
     elif column_name == "huc10":
         prefix = huc[:10]
         return_df = valid_values[valid_values['huc12'].str.startswith(prefix)]
-    
+
     elif column_name == "huc12":
-        return_df = pd.read_parquet(
-            input_file,
-            filters=[(column_name, "=", huc)]
-        )
-    
+        return_df = pd.read_parquet(input_file, filters=[(column_name, "=", huc)])
+
     else:
         print(f"\n\t The passed argument: '{column_name}' is not a valid huc identifier.")
         print(f"\t Please only use huc8 or huc10 as arguments. \n")
@@ -33,13 +30,14 @@ def load_dataframe_by_variable_huc_level(input_file:Path, huc:str, column_name:s
 
     return return_df
 
-def create_dataframe_by_variable_huc_level(df: pd.DataFrame, huc:str, column_name:str):
+
+def create_dataframe_by_variable_huc_level(df: pd.DataFrame, huc: str, column_name: str):
     '''
-    Filter existing dataframe to only contain specified huc values. 
+    Filter existing dataframe to only contain specified huc values.
 
     Inputs:
-        df: Pandas Dataframe 
-        huc: huc to filter using str.startswith on the exisint huc12 colum. 
+        df: Pandas Dataframe
+        huc: huc to filter using str.startswith on the exisint huc12 colum.
         column_name: Used to identify how many characters to slice off of huc12 values.
     Outputs:
         New filtered dataframe by specified huc.
@@ -49,12 +47,12 @@ def create_dataframe_by_variable_huc_level(df: pd.DataFrame, huc:str, column_nam
 
     print(f"\n Amount of rows in input dataframe:  {len(df)}")
     print(f" Amount of huc12 rows dropped with NA values: {len(df) - len(valid_values)} \n")
-    
+
     # Filter by huc8 if we huc's value (-v) was passed (writing known huc value data)
     if column_name == "huc8":
         prefix = huc[:8]
         df = valid_values[valid_values['huc12'].str.startswith(prefix)]
-    # Filter by huc10 if we huc's value (-v) was passed (writing known huc value data) 
+    # Filter by huc10 if we huc's value (-v) was passed (writing known huc value data)
     elif column_name == "huc10":
         prefix = huc[:10]
         df = valid_values[valid_values['huc12'].str.startswith(prefix)]
@@ -62,15 +60,16 @@ def create_dataframe_by_variable_huc_level(df: pd.DataFrame, huc:str, column_nam
         print(f"\n\t The passed argument: '{column_name}' is not a valid huc identifier.")
         print(f"\t Please only use huc8 or huc10 as arguments. \n")
         exit(1)
-    
+
     return df
 
-def create_new_huc_column(df: pd.DataFrame, column_name:str):
+
+def create_new_huc_column(df: pd.DataFrame, column_name: str):
     '''
     Either create a new column (huc8 or huc10)
 
     Inputs:
-        df: Pandas Dataframe 
+        df: Pandas Dataframe
         column_name: Used to identify how many characters to slice off of huc12 values.
     Outputs:
         New dataframe with added huc8 or huc10 column added.
@@ -93,29 +92,26 @@ def create_new_huc_column(df: pd.DataFrame, column_name:str):
         print(f"\n\t The passed argument: '{column_name}' is not a valid huc identifier.")
         print(f"\t Please only use huc8 or huc10 as arguments. \n")
         exit(1)
-    
+
     return df
 
+
 def partition_and_write_parquet(
-    input_file: Path,
-    output_dir: Path,
-    column_name: str,
-    overwrite: bool = False,
-    hucs: list = None
+    input_file: Path, output_dir: Path, column_name: str, overwrite: bool = False, hucs: list = None
 ) -> Path:
     """
     Write individual parquet files based on huc values in a column name (huc12).
     Check if a specific huc or hucs exists in a Parquet file column and extract matching rows.
 
     If no "hucs" argument provided, write all the data within "input_file", splitting by unique values
-    in the "column_name". 
-    
+    in the "column_name".
+
     Inputs:
         input_file (str): Path to input Parquet file
         ouput_dir (str): Path to output Parquet file
         column_name (str): Name of column to check
         hucs (str / optional): Value to search for
-    
+
     Outputs:
         New parquet file with all matching rows in the <output_dir>/<hucs> directory.
     """
@@ -123,9 +119,9 @@ def partition_and_write_parquet(
     # Create output_dir if it doesn't exist
     if os.path.isdir(output_dir) is False:
         os.mkdir(output_dir)
-    
+
     try:
-        
+
         # Filter for one "huc" or value from specified column if hucs argument was passed.
         if hucs is not None and len(hucs) == 1:
 
@@ -139,9 +135,11 @@ def partition_and_write_parquet(
                     os.mkdir(huc_output_dir)
                     print(f"Created directory: {huc_output_dir}, .parquet files will be written there.")
                 elif os.path.isdir(huc_output_dir) is True and overwrite is False:
-                   print(f"\n\t Output Directory: {huc_output_dir} exists, pass the -o flag to overwrite existing files. \n")
-                   exit(1)
-    
+                    print(
+                        f"\n\t Output Directory: {huc_output_dir} exists, pass the -o flag to overwrite existing files. \n"
+                    )
+                    exit(1)
+
                 # Write to new Parquet file
                 print(f" Writing all data where {column_name} = {hucs[0]} to {output_file}")
                 matching_data.to_parquet(output_file, index=False)
@@ -149,7 +147,7 @@ def partition_and_write_parquet(
             else:
                 print(f"HUC: {hucs[0]} was not found in the '{column_name}' column")
                 print(f"No file was written.")
-        
+
         # If more than one huc is passed to create a couple of ripple1d_rating_curve.parquet files, not all rating curve data.
         elif hucs is not None and len(hucs) > 1:
 
@@ -163,15 +161,17 @@ def partition_and_write_parquet(
                     filtered_df = create_dataframe_by_variable_huc_level(all_data, single_huc, column_name)
                 else:
                     filtered_df = all_data[all_data[column_name] == single_huc]
-                
+
                 if not filtered_df.empty:
                     if os.path.isdir(huc_output_dir) is False:
                         os.mkdir(huc_output_dir)
                         print(f"Created directory: {output_dir}, .parquet files will be written there.")
                     elif os.path.isdir(huc_output_dir) is True and overwrite is False:
-                       print(f"\n\t Output Directory: {huc_output_dir} exists, pass the -o flag to overwrite existing files. \n")
-                       exit(1)
-                    
+                        print(
+                            f"\n\t Output Directory: {huc_output_dir} exists, pass the -o flag to overwrite existing files. \n"
+                        )
+                        exit(1)
+
                     # Write to new Parquet file
                     print(f" Writing all data where {column_name} = {single_huc} to {output_file}")
                     filtered_df.to_parquet(output_file, index=False)
@@ -209,8 +209,10 @@ def partition_and_write_parquet(
                         # print(f"Created directory: {output_dir} - .parquet files will be written there.")
 
                     elif os.path.isdir(huc_output_dir) is True and overwrite is False:
-                       print(f"\n\t Output Directory: {huc_output_dir} exists, pass the -o flag to overwrite existing files. \n")
-                       exit(1)
+                        print(
+                            f"\n\t Output Directory: {huc_output_dir} exists, pass the -o flag to overwrite existing files. \n"
+                        )
+                        exit(1)
 
                     # Write the subset to a new Parquet file
                     subset.to_parquet(output_file, index=False)
@@ -221,14 +223,16 @@ def partition_and_write_parquet(
 
                 else:
                     print(f"No files for {unique_value} were written.")
-            
+
             print(f"\n\t{total_written_rows} rows out of {len(final_df)} written.")
-            print(f"\n\t{total_huc_directories} huc directories out of {len(final_df[column_name].unique())} written. \n")
+            print(
+                f"\n\t{total_huc_directories} huc directories out of {len(final_df[column_name].unique())} written. \n"
+            )
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         exit(1)
-    
+
 
 if __name__ == '__main__':
     '''
@@ -260,23 +264,10 @@ if __name__ == '__main__':
         help='Parent directory to add <huc>/ripple1d_rating_curve.parquet file.',
         required=True,
     )
+    parser.add_argument('-c', '--column_name', help='Column name to filter', required=True, type=str)
+    parser.add_argument('-v', '--hucs', help='HUC value to filter', nargs='+', required=False)
     parser.add_argument(
-        '-c', '--column_name',
-        help='Column name to filter',
-        required=True,
-        type=str
-    )
-    parser.add_argument(
-        '-v', '--hucs',
-        help='HUC value to filter',
-        nargs='+',
-        required=False
-    )
-    parser.add_argument(
-        '-o', '--overwrite',
-        help='Overwrite existing parquet files',
-        required=False,
-        action='store_true'
+        '-o', '--overwrite', help='Overwrite existing parquet files', required=False, action='store_true'
     )
 
     # Extract to dictionary and assign to variables.

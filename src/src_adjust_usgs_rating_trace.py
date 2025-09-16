@@ -457,7 +457,7 @@ def branch_proc_list(usgs_df, run_dir, debug_outputs_option, log_file):
 
     # multiprocess all available branches
     print(f"Calculating new SRCs for {len(procs_list)} branches using {job_number} jobs...")
-    #with Pool(processes=job_number) as pool:
+    # with Pool(processes=job_number) as pool:
     #    log_output = pool.starmap(update_rating_curve, procs_list)
     #    log_file.writelines(["%s\n" % item for item in log_output])
     # TO-DO update the error handling to properly capture issues in the multiprocessing
@@ -474,7 +474,13 @@ def branch_proc_list(usgs_df, run_dir, debug_outputs_option, log_file):
 
 
 def run_prep(
-    run_dir, usgs_rc_filepath, usgs_sites_filepath, nwm_recurr_filepath, huc_level, debug_outputs_option, job_number
+    run_dir,
+    usgs_rc_filepath,
+    usgs_sites_filepath,
+    nwm_recurr_filepath,
+    huc_level,
+    debug_outputs_option,
+    job_number,
 ):
     # Check input args are valid
     assert os.path.isdir(run_dir), 'ERROR: could not find the input fim_dir location: ' + str(run_dir)
@@ -564,13 +570,7 @@ if __name__ == '__main__':
         help='Path to NWM recur file (multiple NWM flow intervals). NOTE: assumes flow units are cfs!!',
         required=True,
     )
-    parser.add_argument(
-        '-huc_level',
-        '--huc-level',
-        help='HUC level to use',
-        required=True,
-        type=int,
-    )
+    parser.add_argument('-huc_level', '--huc-level', help='HUC level to use', required=True, type=int)
     parser.add_argument(
         '-debug',
         '--extra-outputs',
@@ -593,5 +593,11 @@ if __name__ == '__main__':
 
     # Prepare/check inputs, create log file, and spin up the proc list
     run_prep(
-        run_dir, usgs_rc_filepath, usgs_sites_filepath, nwm_recurr_filepath, huc_level, debug_outputs_option, job_number
+        run_dir,
+        usgs_rc_filepath,
+        usgs_sites_filepath,
+        nwm_recurr_filepath,
+        huc_level,
+        debug_outputs_option,
+        job_number,
     )

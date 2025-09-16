@@ -26,12 +26,14 @@ from utils.shared_variables import PREP_CRS
 
 gpd.options.io_engine = "pyogrio"
 
+
 class LevelPathIsExternal(Exception):
     """Exception raised when the level path is external to the catchment."""
 
     def __init__(self, message):
         self.message = message
         super().__init__(self.message)
+
 
 class StreamNetwork(gpd.GeoDataFrame):
     """
@@ -808,7 +810,8 @@ class StreamNetwork(gpd.GeoDataFrame):
         outlet_reach_ids = self.index[outlet_boolean_mask].tolist()
 
         branch_ids = [
-            str(h).zfill(4)[0:4] + str(b + 1).zfill(max_branch_id_digits) for b, h in enumerate(outlet_reach_ids)
+            str(h).zfill(4)[0:4] + str(b + 1).zfill(max_branch_id_digits)
+            for b, h in enumerate(outlet_reach_ids)
         ]
 
         self.loc[outlet_reach_ids, branch_id_attribute] = branch_ids
@@ -1123,7 +1126,7 @@ class StreamNetwork(gpd.GeoDataFrame):
 
             if self_extended.loc[idx].empty:
                 idx = self_extended['ID'] == extended_id
-            
+
             try:
                 self_extended.loc[idx, 'geometry'].item()
             except ValueError:

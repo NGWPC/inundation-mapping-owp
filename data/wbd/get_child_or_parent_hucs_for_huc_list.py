@@ -21,11 +21,11 @@ def main(
     if input_huc_list:
         huc_list = HucList(input_huc_list)
     else:
-        huc_list = HucList.from_huc_list_file(input_huc_list_file)    
+        huc_list = HucList.from_huc_list_file(input_huc_list_file)
 
     # Get parent or child HUCs and create a new HucList object
     output_huc_list__ = huc_list.get_any_hucs(huc_level, verbose=(not quiet), n_jobs=n_jobs)
-    
+
     # drop NAs
     output_huc_list__.dropna(inplace=True)
 
@@ -43,15 +43,25 @@ def main(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    
+
     # input_huc_list_file and input_huc_list are mutually exclusive
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-i", "--input_huc_list_file", type=str, help="Input huc list file path.")
     group.add_argument("-l", "--input_huc_list", type=str, help="Input huc list", nargs="+")
 
-    parser.add_argument("-o", "--output_huc_list_file", required=False, type=str, help="Output huc list file path.")
-    parser.add_argument("-e", "--huc_level", required=True, type=int, help="HUC level to get parent or child HUCs for.")
-    parser.add_argument("-j", "--n_jobs", type=int, default=1, help="Number of parallel jobs. One job runs the whole process serially.")
+    parser.add_argument(
+        "-o", "--output_huc_list_file", required=False, type=str, help="Output huc list file path."
+    )
+    parser.add_argument(
+        "-e", "--huc_level", required=True, type=int, help="HUC level to get parent or child HUCs for."
+    )
+    parser.add_argument(
+        "-j",
+        "--n_jobs",
+        type=int,
+        default=1,
+        help="Number of parallel jobs. One job runs the whole process serially.",
+    )
     parser.add_argument("-q", "--quiet", action="store_true", help="Suppress output.")
 
     args = vars(parser.parse_args())
