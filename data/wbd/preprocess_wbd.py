@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
-from typing import List
-
 import argparse
 import os
 from pathlib import Path
+from typing import List
 
-from tqdm import tqdm
 import geopandas as gpd
+from tqdm import tqdm
 
 from utils.shared_variables import DEFAULT_FIM_PROJECTION_CRS
 

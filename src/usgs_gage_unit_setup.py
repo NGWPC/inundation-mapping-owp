@@ -8,8 +8,8 @@ from posixpath import dirname
 
 import geopandas as gpd
 import pandas as pd
-from shapely.geometry import Point
 from shapely import wkb
+from shapely.geometry import Point
 
 from utils.shared_variables import PREP_CRS
 

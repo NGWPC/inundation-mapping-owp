@@ -8,7 +8,6 @@ from glob import glob
 from logging import exception
 
 
-
 def __read_included_files(parent_dir_path, huc_level):
     """
     Reads the list of HUCs that are included in the analysis

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 import argparse
 import os
+import re
 
 import numpy as np
+import pyflwdir
 import rasterio
 import whitebox
-import pyflwdir
-import re
+
 
 wbt_pattern = re.compile('(^\*|\%$)')
 

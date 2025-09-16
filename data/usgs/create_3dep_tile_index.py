@@ -12,21 +12,22 @@ Command Line Usage:
 """
 
 from __future__ import annotations
-from typing import List
-from pyproj import CRS
 
-import subprocess
 import argparse
 import os
-from pathlib import Path
-import time
-import requests
+import subprocess
 import tempfile
+import time
+from pathlib import Path
+from typing import List
 
-from bs4 import BeautifulSoup
-from tqdm import tqdm
-from dotenv import load_dotenv
 import geopandas as gpd
+import requests
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+from pyproj import CRS
+from tqdm import tqdm
+
 
 srcDir = os.getenv('srcDir')
 load_dotenv(os.path.join(srcDir, 'bash_variables.env'))

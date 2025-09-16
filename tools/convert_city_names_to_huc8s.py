@@ -9,19 +9,20 @@ dir=/data/misc/lidar; /foss_fim/tools/convert_city_names_to_huc8s.py -s UA_C -c 
 """
 from __future__ import annotations
 
-from typing import Iterable, Tuple
-from pathlib import Path
-from pyproj import CRS
-
 import argparse
-import geopandas as gpd
-import pandas as pd
 import json
 import os
 import re
+from pathlib import Path
+from typing import Iterable, Tuple
+
+import geopandas as gpd
+import pandas as pd
+from acquire_tigerweb_data import Acquire_tigerweb_data
+from pyproj import CRS
 
 from utils.shared_variables import DEFAULT_FIM_PROJECTION_CRS
-from acquire_tigerweb_data import Acquire_tigerweb_data
+
 
 INPUT_DIR = os.environ.get('inputsDir')
 

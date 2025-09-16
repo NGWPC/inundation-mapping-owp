@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
+import gc
 import json
 import os
 import re
 import shutil
 import sys
 import traceback
-import gc
 
 import pandas as pd
 from inundate_mosaic_wrapper import produce_mosaicked_inundation

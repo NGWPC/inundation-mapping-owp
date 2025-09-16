@@ -6,6 +6,7 @@ import multiprocessing
 import os
 import sys
 from multiprocessing import Pool
+from pathlib import Path
 
 import geopandas as gpd
 import numpy as np
@@ -13,8 +14,6 @@ import pandas as pd
 import rasterio
 from dotenv import load_dotenv
 from rasterstats import point_query
-from pathlib import Path
-
 
 from src_roughness_optimization import update_rating_curve
 from utils.shared_variables import (

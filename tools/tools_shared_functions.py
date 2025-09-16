@@ -2,7 +2,6 @@
 
 import datetime as dt
 import gc
-import gc
 import json
 import logging
 import os

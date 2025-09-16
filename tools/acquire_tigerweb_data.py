@@ -5,19 +5,19 @@ Acquires US Census TIGERweb data.
 """
 from __future__ import annotations
 
-from pathlib import Path
-from pyproj import CRS
-
-import tempfile
-import urllib
-import os
-import zipfile
 import argparse
 import json
+import os
+import tempfile
+import urllib
+import zipfile
+from pathlib import Path
 
 import geopandas as gpd
+from pyproj import CRS
 
 from utils.shared_variables import DEFAULT_FIM_PROJECTION_CRS
+
 
 WRITE_KWARGS = {'index' : False}
 

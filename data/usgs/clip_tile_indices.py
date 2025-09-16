@@ -3,12 +3,13 @@
 Clips 3DEP tile indices to WBD and each other
 """
 from __future__ import annotations
-from shapely.geometry import Polygon
 
-import os
 import argparse
+import os
 
 import geopandas as gpd
+from shapely.geometry import Polygon
+
 
 def clip_3m_to_1m(
     one_meter_gdf: gpd.GeoDataFrame,

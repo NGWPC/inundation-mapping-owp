@@ -12,33 +12,33 @@ Command Line Usage:
 """
 
 from __future__ import annotations
-from typing import List, Sequence
-from numbers import Number
-from pyproj import CRS
 
-import uuid
 import argparse
-import os
-from pathlib import Path
-from functools import partial
-from urllib.parse import urlparse
-import shutil
-import tempfile
-import requests
-import subprocess
-
-
-from osgeo import gdal
-from rasterio.enums import Resampling
-import pandas as pd
-import geopandas as gpd
-import odc.geo.xr
-from dotenv import load_dotenv
-from dask.distributed import Client, as_completed, get_client, LocalCluster
-from tqdm import tqdm
-import rioxarray as rxr
-import numpy as np
 import gc
+import os
+import shutil
+import subprocess
+import tempfile
+import uuid
+from functools import partial
+from numbers import Number
+from pathlib import Path
+from typing import List, Sequence
+from urllib.parse import urlparse
+
+import geopandas as gpd
+import numpy as np
+import odc.geo.xr
+import pandas as pd
+import requests
+import rioxarray as rxr
+from dask.distributed import Client, LocalCluster, as_completed, get_client
+from dotenv import load_dotenv
+from osgeo import gdal
+from pyproj import CRS
+from rasterio.enums import Resampling
+from tqdm import tqdm
+
 
 # Enable exceptions for GDAL
 gdal.UseExceptions()

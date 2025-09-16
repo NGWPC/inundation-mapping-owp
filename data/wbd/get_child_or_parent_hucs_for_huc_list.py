@@ -5,9 +5,7 @@ Get parent or child HUCs for a huc list file.
 import argparse
 
 import pandas as pd
-
-from hucs import HucList, Huc
-
+from hucs import Huc, HucList
 
 
 def main(
