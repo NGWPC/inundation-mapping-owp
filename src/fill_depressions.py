@@ -27,8 +27,8 @@ def fill_depressions_wbt(workspace, branch_zero_id):
         input_dem = os.path.join(workspace, f'dem_burned_{branch_zero_id}.tif')
         output_dem = os.path.join(workspace, f'dem_burned_filled_{branch_zero_id}.tif')
     else:
-        input_dem = os.path.join(workspace, f'dem_burned.tif')
-        output_dem = os.path.join(workspace, f'dem_burned_filled.tif')
+        input_dem = os.path.join(workspace, 'dem_burned.tif')
+        output_dem = os.path.join(workspace, 'dem_burned_filled.tif')
 
     wbt.fill_depressions(
         input_dem, output_dem, fix_flats=False, flat_increment=None, max_depth=None, callback=wbt_callback
@@ -50,12 +50,12 @@ def fill_depressions_pyflwdir(workspace, branch_zero_id):
         input_dem = os.path.join(workspace, f'dem_burned_{branch_zero_id}.tif')
         output_dem = os.path.join(workspace, f'dem_burned_filled_{branch_zero_id}.tif')
     else:
-        input_dem = os.path.join(workspace, f'dem_burned.tif')
-        output_dem = os.path.join(workspace, f'dem_burned_filled.tif')
+        input_dem = os.path.join(workspace, 'dem_burned.tif')
+        output_dem = os.path.join(workspace, 'dem_burned_filled.tif')
 
     with rasterio.open(input_dem, "r") as src:
         elevtn = src.read(1)
-        nodata = src.nodata
+        # nodata = src.nodata
         profile = src.profile
         # transform = src.transform
         # crs = src.crs
@@ -97,10 +97,10 @@ if __name__ == '__main__':
 
     ## Run WBT fill_depressions method
     if method == "wbt":
-        print(f"Using WBT Fill Depressions method")
+        print("Using WBT Fill Depressions method")
         fill_depressions_wbt(workspace, branch_zero_id)
 
     # Run pyflwdir fill_depressions method (some 3m resolution DEM and 1m DEM)
     if method == "pyflwdir":
-        print(f"Using Pyflwdir Fill Depressions method")
+        print("Using Pyflwdir Fill Depressions method")
         fill_depressions_pyflwdir(workspace, branch_zero_id)

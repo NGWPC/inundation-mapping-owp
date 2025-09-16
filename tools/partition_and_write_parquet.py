@@ -25,7 +25,7 @@ def load_dataframe_by_variable_huc_level(input_file: Path, huc: str, column_name
 
     else:
         print(f"\n\t The passed argument: '{column_name}' is not a valid huc identifier.")
-        print(f"\t Please only use huc8 or huc10 as arguments. \n")
+        print("\t Please only use huc8 or huc10 as arguments. \n")
         exit(1)
 
     return return_df
@@ -58,7 +58,7 @@ def create_dataframe_by_variable_huc_level(df: pd.DataFrame, huc: str, column_na
         df = valid_values[valid_values['huc12'].str.startswith(prefix)]
     else:
         print(f"\n\t The passed argument: '{column_name}' is not a valid huc identifier.")
-        print(f"\t Please only use huc8 or huc10 as arguments. \n")
+        print("\t Please only use huc8 or huc10 as arguments. \n")
         exit(1)
 
     return df
@@ -90,7 +90,7 @@ def create_new_huc_column(df: pd.DataFrame, column_name: str):
         df.loc[:, 'huc10'] = df['huc12'].str[:10]
     else:
         print(f"\n\t The passed argument: '{column_name}' is not a valid huc identifier.")
-        print(f"\t Please only use huc8 or huc10 as arguments. \n")
+        print("\t Please only use huc8 or huc10 as arguments. \n")
         exit(1)
 
     return df
@@ -146,7 +146,7 @@ def partition_and_write_parquet(
                 print(f"Wrote {len(matching_data)} rows to {output_file}")
             else:
                 print(f"HUC: {hucs[0]} was not found in the '{column_name}' column")
-                print(f"No file was written.")
+                print("No file was written.")
 
         # If more than one huc is passed to create a couple of ripple1d_rating_curve.parquet files, not all rating curve data.
         elif hucs is not None and len(hucs) > 1:
@@ -179,7 +179,7 @@ def partition_and_write_parquet(
 
                 else:
                     print(f"HUC: {single_huc} was not found in the column {column_name}")
-                    print(f"No file was written.")
+                    print("No file was written.")
 
         # Otherwise, write a file for each unique item (huc) at the specified huc level (huc8, huc10, or huc12)
         else:
@@ -247,7 +247,7 @@ if __name__ == '__main__':
         -d /data/inputs/rating_curve/ripple1d/huc12_test \
         -c "huc10" \
         -v 1202000204 1806001007
-    
+
     To generate all new Rating Curve data for each huc level:
     python3 partition_and_write_parquet.py -i /data/inputs/rating_curve/ripple1d/merged_rc_points.parquet \
         -d /data/inputs/rating_curve/ripple1d/huc12_new \

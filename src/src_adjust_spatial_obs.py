@@ -93,6 +93,7 @@ def process_points(args):
 
     ## OWP Version - merge v4.8.7.3
     ## hydroid_prefixpath file does not exist
+    print(f" Not using {hydroid_prefixpath}")
     # with open(hydroid_prefixpath, 'r') as file:
     #     hydroid_prefix = file.read()
     #     int_hid_prefix = int(hydroid_prefix) * 10000

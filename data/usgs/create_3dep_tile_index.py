@@ -98,8 +98,9 @@ def get_1m_tile_urls(project_urls: List[str]) -> List[str]:
         # Fetch the content of each folder
         try:
             response = retry_request(project_url)
-        except:
+        except Exception as e:
             print(f"Failed to fetch {project_url}")
+            print(f"*** {e}")
             continue
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -115,8 +116,9 @@ def get_1m_tile_urls(project_urls: List[str]) -> List[str]:
         tiff_dir_contents = project_url + tiff_folder_link.get('href')
         try:
             response = retry_request(tiff_dir_contents)
-        except:
+        except Exception as e:
             print(f"Failed to fetch {tiff_dir_contents}")
+            print(f"*** {e}")
             continue
 
         soup = BeautifulSoup(response.content, 'html.parser')

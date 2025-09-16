@@ -398,7 +398,7 @@ class HucList:
         self, huc_level: int, as_series: bool = True, verbose: bool = False
     ) -> Set[str] | pd.Series[str]:
         """Get the child HUCs for a given HUC level"""
-        
+
         # check if the available HUCs have been set
         self._set_available_hucs(huc_level)
 
@@ -411,12 +411,12 @@ class HucList:
         if as_series:
             return pd.Series({str(h): ch for h, ch in self._child_hucs[huc_level].items()}).explode()
         return self._child_hucs[huc_level]
-    
+
     def get_parent_hucs(
         self, huc_level: int, as_series: bool = True, verbose: bool = False
     ) -> Set[str] | pd.Series[str]:
         """Get the parent HUCs for a given HUC level"""
-        
+
         # check if the available HUCs have been set
         self._set_available_hucs(huc_level)
 
@@ -429,7 +429,7 @@ class HucList:
         if as_series:
             return pd.Series({str(h): ph for h, ph in self._parent_hucs[huc_level].items()}).explode()
         return self._parent_hucs[huc_level]
-    
+
     def get_any_hucs(self, huc_level: int, as_series: bool = True, verbose: bool = False) -> Set[str] | pd.Series[str]:
         """Get the parent or child HUCs for a given HUC level"""
         hucs = {

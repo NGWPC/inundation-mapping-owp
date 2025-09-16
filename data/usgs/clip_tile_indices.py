@@ -119,7 +119,7 @@ def main(
             )
 
     if verbose:
-        print(f"Loading tile indices and WBD ...")
+        print("Loading tile indices and WBD ...")
 
     # load tile indices
     one_meter_gdf = gpd.read_file(one_meter_path)

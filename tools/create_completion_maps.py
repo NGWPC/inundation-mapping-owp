@@ -12,7 +12,7 @@ import pandas as pd
 WBD_PATH = r'/data/inputs/wbd/WBD_National.gpkg'
 # WBD_PATH = r'/efs/fim-data/hand_fim/inputs/wbd/WBD_National_South_Alaska_WBDHU12.gpkg'
 
-HUC_NUMBER = 12
+HUC_NUMBER = 8
 HUC_LEVEL = f'HUC{HUC_NUMBER}'
 
 PW_INSTANCE_TYPE_DICT = {
@@ -66,7 +66,7 @@ def parse_log_to_dict(filepath):
 
     # The first line contains the headers
     headers = lines[0].strip().split('\t')
-    
+
     # Initialize the dictionary to hold the parsed data
     log_dict = {}
    # Process each line except the first (header line)
@@ -80,7 +80,7 @@ def parse_log_to_dict(filepath):
         entry['Command'] = ' '.join(fields[-1].split()[:-1])
         # Insert into the dictionary using huc8 as the key
         log_dict[huc8] = entry
-    
+
     return log_dict
 '''
 
@@ -332,7 +332,7 @@ def calculate_storage(log_dict, unit_log_dir, efs_storage_cost_monthly=None, s3_
                 sum(f.stat().st_size for f in root_directory.glob('**/*') if f.is_file()) / (1024**3), 2
             )
 
-            if efs_storage_cost_monthly != None:
+            if efs_storage_cost_monthly is not None:
                 huc_storage_efs_cost_per_month_usd = dir_size_gb * efs_storage_cost_monthly
                 total_efs_storage_cost_monthly += round(huc_storage_efs_cost_per_month_usd, 2)
                 huc_storage_efs_cost_per_3month_usd = huc_storage_efs_cost_per_month_usd * 3.0
@@ -342,7 +342,7 @@ def calculate_storage(log_dict, unit_log_dir, efs_storage_cost_monthly=None, s3_
                 huc_storage_efs_cost_per_3month_usd = np.nan
                 huc_storage_efs_cost_per_6month_usd = np.nan
 
-            if s3_cost_monthly != None:
+            if s3_cost_monthly is not None:
                 huc_storage_s3_cost_per_month_usd = dir_size_gb * s3_cost_monthly
                 total_s3_storage_cost_monthly += round(huc_storage_s3_cost_per_month_usd, 2)
                 huc_storage_s3_cost_per_3month_usd = huc_storage_s3_cost_per_month_usd * 3.0
@@ -366,12 +366,12 @@ def calculate_storage(log_dict, unit_log_dir, efs_storage_cost_monthly=None, s3_
         log_dict[huc]['s3_storage_cost_3month_usd'] = huc_storage_s3_cost_per_3month_usd
         log_dict[huc]['s3_storage_cost_6month_usd'] = huc_storage_s3_cost_per_6month_usd
 
-    if efs_storage_cost_monthly != None:
+    if efs_storage_cost_monthly is not None:
         print(f"Total EFS Storage Cost per Month: ${round(total_efs_storage_cost_monthly, 2)}")
     else:
         print("No EFS storage cost value provided.")
 
-    if s3_cost_monthly != None:
+    if s3_cost_monthly is not None:
         print(f"Total S3 Storage Cost per Month:  ${round(total_s3_storage_cost_monthly, 2)}")
     else:
         print("No S3 storage cost value provided.")
@@ -403,7 +403,7 @@ def count_branches(log_dict, unit_log_dir):
         except FileNotFoundError:
             pass
 
-        candidate_branch_count, created_branch_count = len(candidate_branch_list), len(created_branch_list)
+        candidate_branch_count = len(candidate_branch_list)
 
         # Update log_dict
         log_dict[huc]['candidate_branches'] = candidate_branch_count
@@ -493,11 +493,11 @@ def generate_geopackage(
     get_max_memory_in_gb(log_dict)
 
     # Calculate cost
-    if instance_type != None:
+    if instance_type is not None:
         log_dict = update_log_with_costs(log_dict, cost_per_hour)
 
     # Calculate storage costs
-    if efs_storage_cost_monthly != None or s3_cost_monthly != None:
+    if efs_storage_cost_monthly is not None or s3_cost_monthly is not None:
         print("Calculating storage...")
         log_dict = calculate_storage(log_dict, unit_log_dir, efs_storage_cost_monthly, s3_cost_monthly)
 

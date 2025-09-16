@@ -422,7 +422,7 @@ def get_3dep_static_tiles(
 
                 try:
                     tile_fn = future.result()
-                except:
+                except Exception as ex:
                     # Find the original arguments used for the failed future
                     url, res = tile_index.loc[idx, ['location', 'dem_resolution']]
 

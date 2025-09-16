@@ -35,7 +35,7 @@ Processing
 Inputs
 - run_dir:                  fim directory containing individual HUC output dirs
 - ripple1d inputs dir:      input directory with HUC level ripple1d rating curves
-- ripple1d RC filename:     ripple1d rating curve database filename 
+- ripple1d RC filename:     ripple1d rating curve database filename
 - nwm_recurr_filepath:      NWM flow recurrence interval dataset
 - huc_level:                HUC level used (8, 10, or 12)
 - debug_outputs_option:     optional flag to output intermediate files for reviewing/debugging
