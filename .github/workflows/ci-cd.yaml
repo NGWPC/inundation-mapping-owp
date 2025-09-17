@@ -84,9 +84,9 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.url=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.documentation=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.authors=${{ github.actor }}
+            org.opencontainers.image.authors=${{ github.repository_owner }}
             org.opencontainers.image.licenses=MIT
-            maintainer=${{ github.actor }}
+            maintainer=${{ github.repository_owner}}
           tags: |
             ${{ needs.setup.outputs.image_base }}:${{ needs.setup.outputs.test_image_tag }}
             ${{ needs.setup.outputs.image_base }}:latest
