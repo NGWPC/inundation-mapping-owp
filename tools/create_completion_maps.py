@@ -271,7 +271,7 @@ def update_log_with_costs(log_dict, cost_per_hour):
             except ValueError:
                 print(f"Error converting user time to float for entry {key}")
 
-    print(f"Total elapsed Wall Clock Time (hours): {round(total_wc_time_hours,2)}")
+    print(f"Total elapsed Wall Clock Time (hours): {round(total_wc_time_hours, 2)}")
     print(f"Total Run Cost: ${round(total_run_cost, 2)}")
     return log_dict
 
