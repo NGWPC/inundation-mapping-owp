@@ -34,7 +34,7 @@ def combine_crosswalk_tables(data_directory, output_filename):
     if len(dfs) > 1:
         df = pd.concat(dfs)
 
-        huc_level = len(df['HUC'].iloc[0])
+        huc_level = len(str(df['HUC'].iloc[0]))
 
         df = df.rename(
             columns={'HUC': f'huc{huc_level}', 'HydroID': 'hydro_id', 'LakeID': 'lake_id', 'BranchID': 'branch_id'}
