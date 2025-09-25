@@ -38,12 +38,12 @@ class HucDirectory(object):
         self.agg_usgs_elev_table = pd.DataFrame(columns=list(self.usgs_dtypes.keys()))
 
         self.hydrotable_dtypes = {
-            'HydroID': int,
-            'branch_id': int,
-            'feature_id': int,
-            'NextDownID': int,
-            'order_': int,
-            'Number of Cells': int,
+            'HydroID': 'Int64',
+            'branch_id': 'Int64',
+            'feature_id': 'Int64',
+            'NextDownID': 'Int64',
+            'order_': 'Int64',
+            'Number of Cells': 'Int64',
             'SurfaceArea (m2)': float,
             'BedArea (m2)': float,
             'TopWidth (m)': float,
@@ -69,8 +69,8 @@ class HucDirectory(object):
             'calb_coef_usgs': float,
             'calb_coef_spatial': float,
             'calb_coef_final': float,
-            'HUC': int,
-            'LakeID': int,
+            'HUC': 'Int64',
+            'LakeID': 'Int64',
             'subdiv_applied': bool,
             'channel_n': float,
             'overbank_n': float,
@@ -80,11 +80,11 @@ class HucDirectory(object):
         self.agg_hydrotable = pd.DataFrame(columns=list(self.hydrotable_dtypes.keys()))
 
         self.src_crosswalked_dtypes = {
-            'branch_id': int,
-            'HydroID': int,
-            'feature_id': int,
+            'branch_id': 'Int64',
+            'HydroID': 'Int64',
+            'feature_id': 'Int64',
             'Stage': float,
-            'Number of Cells': int,
+            'Number of Cells': 'Int64',
             'SurfaceArea (m2)': float,
             'BedArea (m2)': float,
             'Volume (m3)': float,
@@ -92,8 +92,8 @@ class HucDirectory(object):
             'LENGTHKM': float,
             'AREASQKM': float,
             'ManningN': float,
-            'NextDownID': int,
-            'order_': int,
+            'NextDownID': 'Int64',
+            'order_': 'Int64',
             'TopWidth (m)': float,
             'WettedPerimeter (m)': float,
             'WetArea (m2)': float,
@@ -130,8 +130,8 @@ class HucDirectory(object):
         self.ras_dtypes = {
             'location_id': str,
             'nws_lid': str,
-            'feature_id': int,
-            'HydroID': int,
+            'feature_id': 'Int64',
+            'HydroID': 'Int64',
             'levpa_id': str,
             'dem_elevation': float,
             'dem_adj_elevation': float,
@@ -145,8 +145,8 @@ class HucDirectory(object):
         self.ripple1d_dtypes = {
             'location_id': str,
             'nws_lid': str,
-            'feature_id': int,
-            'HydroID': int,
+            'feature_id': 'Int64',
+            'HydroID': 'Int64',
             'levpa_id': str,
             'dem_elevation': float,
             'dem_adj_elevation': float,
@@ -160,15 +160,15 @@ class HucDirectory(object):
         self.agg_ripple1d_elev_table = pd.DataFrame(columns=list(self.ripple1d_dtypes.keys()))
 
         self.bridge_dtypes = {
-            'osmid': int,
+            'osmid': 'Int64',
             'name': str,
             'max_hand': float,
             'max_hand_75': float,
-            'feature_id': int,
-            'HydroID': int,
+            'feature_id': 'Int64',
+            'HydroID': 'Int64',
             'order_': str,
             'branch': str,
-            'mainstem': int,
+            'mainstem': 'Int64',
             'geometry': object,
         }
         self.agg_bridge_pnts = gpd.GeoDataFrame(columns=list(self.bridge_dtypes.keys()))
