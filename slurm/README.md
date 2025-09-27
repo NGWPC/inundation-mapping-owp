@@ -7,17 +7,31 @@ This directory contains the requisite scripts to use a slurm scheduler to genera
 
 ```mermaid
 flowchart TD
-    A[Parrallelize?] --> |No - single node| G(slurm_single_fim_pipeline.sh)
-    A --> |Yes - many nodes| B(slurm_pipeline.sh)
-    B --> C[slurm_pre_processing.sh]
-    C --- X[Partitions?]
-    subgraph HUC Level Parallelization
-        X --> |no| D[slurm_process_unit_wb.sh]
-        X --> | yes | I[slurm_partition_process_unit.sh]
-        I --> J(process_unit_wb_partitions.sh)
+    A[Parallelize?]:::blueStyle --> |No - single node| G(slurm_single_fim_pipeline.sh)
+    A --> |Yes - many nodes| B(slurm_pipeline.sh):::redStyle 
+    B --> C[slurm_pre_processing.sh]:::redStyle 
+    C --> X[Partitions?]:::redStyle 
+    X --> |No| M[Restart?]:::redStyle 
+    X --> |Yes| I[slurm_partition_process_unit.sh]
+    M --> |Yes| F[slurm_process_unit_wb_restart.sh]
+    M --> |No| L[slurm_process_unit_wb.sh]
+    
+    subgraph HUC["HUC Level Parallelization"]
+        I[slurm_partition_process_unit.sh]:::greenStyle
+        I --> J[slurm_process_unit_wb_partitions.sh]:::greenStyle
+        F[slurm_process_unit_wb_restart.sh]:::greenStyle
+        L[slurm_process_unit_wb.sh]:::greenStyle
     end
-    J --> E[slurm_post_processing.sh]
-    D --> E[slurm_post_processing.sh]
+    
+    F --> E[slurm_post_processing.sh]:::blueStyle
+    L --> E
+    J --> E
+
+    classDef subgraphStyle fill:#FFDBBB,stroke:#013220,stroke-width:2px
+    class HUC subgraphStyle
+    classDef blueStyle fill:#bbdefb,stroke:#1976d2
+    classDef greenStyle fill:#c8e6c9,stroke:#388e3c
+    classDef redStyle fill:#FFCCCB
 ```
 
 Please see inline comments, as well as the child `slurm_*.sh` (sbatch) files to gain a better awareness of the procedues used before issuing a run.
